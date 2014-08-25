@@ -15,7 +15,7 @@ To run the psi4 plugin gpu_dfcc:
 
 * Download and install psi4public from github.com:
 https://github.com/psi4/psi4public.  You can obtain the source using git:
-   > git clone git@github.com:psi4/psi4public.git
+   > git clone git@github.com:psi4/psi4public.git\\
 Install psi4 as described on http://www.psicode.org/.
 
 * Configure gpu_dfcc by editing the configure file in this directory.
