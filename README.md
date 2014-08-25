@@ -3,6 +3,7 @@ GPU DF-CC plugin in PSI4
 
 OVERVIEW
 ---
+
 This plugin to Psi4[1] performs GPU-accelerated density-fitted (DF)
 singles and doubles coupled cluster (CCSD)[2] computations.  The
 perturbative triples contribution to the correlation energy (T) is also
@@ -22,8 +23,9 @@ https://github.com/psi4/psi4public.  You can obtain the source using git:
 
     Install psi4 as described on http://www.psicode.org/.
 
-* Configure gpu_dfcc by editing the configure file in this directory.
-Specify the location of psi4 and your cublas library:
+* Configure gpu_dfcc by editing the configure file in the gpu_dfcc/
+directory.  Specify the location of psi4 and your cublas library and run
+the configure script:
 
     > ./configure
 
@@ -48,9 +50,10 @@ INPUT OPTIONS
 * **NUM_GPUS** (int):
 
     the number of GPUs on your system.  The code will automatically
-    determine the resources available.  This keyword is useful if you only
-    want to use one GPU.  This may be the case if you have a GPU to drive
-    your monitor in addition to a compute-oriented card.
+    determine the resources available, so this keyword is useful if you
+    want to use fewer GPUs than are available.  This may be the case if
+    you have a GPU to drive your monitor in addition to a compute-oriented
+    card.
 
 * **MAX_MAPPED_MEMORY** (int): 
 
@@ -95,6 +98,12 @@ INPUT OPTIONS
 
     tolerance for Cholesky decomposition of the
     ERI tensor (only used if DF_BASIS_CC=cholesky or SCF_TYPE=cd).
+
+
+KNOWN ISSUES
+---
+The program tends to exit with an innocuous segfault.
+
 
 REFERENCES
 ---
