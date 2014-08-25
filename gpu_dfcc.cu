@@ -74,22 +74,6 @@ int read_options(std::string name, Options& options)
           |scf__scf_type|=cd -*/
       options.add_double("CHOLESKY_TOLERANCE",1.0e-4);
 
-      /*- Is this a CEPA job? This parameter is used internally
-      by the pythond driver.  Changing its value won't have any
-      effect on the procedure. !expert -*/
-      options.add_bool("RUN_CEPA",false);
-      /*- Which coupled-pair method is called?  This parameter is
-      used internally by the python driver.  Changing its value
-      won't have any effect on the procedure. !expert -*/
-      options.add_str("CEPA_LEVEL","CEPA(0)");
-      /*- Compute the dipole moment? Note that dipole moments
-      are only available in the FNOCC module for the ACPF, 
-      AQCC, CISD, and CEPA(0) methods. -*/
-      options.add_bool("DIPMOM",false);
-      /*- Flag to exclude singly excited configurations from a 
-      coupled-pair computation.  -*/
-      options.add_bool("CEPA_NO_SINGLES",false);
-
     }
 
     return true;
