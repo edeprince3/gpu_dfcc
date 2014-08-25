@@ -43,12 +43,9 @@ Specify the location of psi4 and your cublas library:
 INPUT OPTIONS
 ---
 
-**NUM_GPUS** (int)
+**NUM_GPUS** (int):
 
-    the number of GPUs on your system.  The code will
-    automatically determine the resources available.  This keyword is useful
-    if you only want to use one GPU.  This may be the case if you have a GPU
-    to drive your monitor in addition to a compute-oriented card.
+    the number of GPUs on your system.  The code will automatically determine the resources available.  This keyword is useful if you only want to use one GPU.  This may be the case if you have a GPU to drive your monitor in addition to a compute-oriented card.
 
 **MAX_MAPPED_MEMORY** (int): 
 
