@@ -1,3 +1,16 @@
+GPU DF-CC plugin in PSI4
+===
+
+OVERVIEW
+---
+This plugin to Psi4 performs GPU-accelerated density-fitted (DF) singles and doubles coupled cluster (CCSD)
+computations.  The perturbative triples contribution to the correlation energy (T) is also implemented, but
+the performace of (T) in the present plugin is not much better than that of the DF-CCSD(T) implementation in the
+current release of Psi4.
+
+INSTALLATION
+---
+
 To run the psi4 plugin gpu_dfcc:
 
 1.  Download and install psi4public from github.com:
