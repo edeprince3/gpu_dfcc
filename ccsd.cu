@@ -921,6 +921,7 @@ void GPUDFCoupledCluster::AllocateMemory() {
           fprintf(outfile,"\n  <<< warning! >>> switched to low-memory (t) algorithm\n\n");
       }
       if (tempmem > memory || options_.get_bool("TRIPLES_LOW_MEMORY")){
+         throw PsiException("low-memory triples option not yet implemented",__FILE__,__LINE__);
          isLowMemory = true;
          tempmem = 8.*(2L*o*o*v*v+o*o*o*v+o*v+5L*o*o*o*nthreads);
       }

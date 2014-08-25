@@ -18,9 +18,9 @@ extern "C"
 int read_options(std::string name, Options& options)
 {
     if (name == "GPU_DFCC"|| options.read_globals()) {
-      /*- do dgemm timings? -*/
+      /*- Do dgemm timings? ! expert -*/
       options.add_bool("DGEMM_TIMINGS",false);
-      /*- max mapped memory (mb) -*/
+      /*- Maximum amount of pinned CPU memory (mb) -*/
       options.add_int("MAX_MAPPED_MEMORY",7000);
       /*- Override number of GPUs detected? -*/
       options.add_int("NUM_GPUS",0);
@@ -29,11 +29,6 @@ int read_options(std::string name, Options& options)
       /*- Convergence for the CC energy.  Note that convergence is
           met only when E_CONVERGENCE and R_CONVERGENCE are satisfied. -*/
       options.add_double("E_CONVERGENCE", 1.0e-8);
-      /*- Convergence criterion for Breuckner orbitals. The convergence
-         is determined based on the largest $T_1$ amplitude. -*/
-      options.add_double("BRUECKNER_ORBS_R_CONVERGENCE", 1e-5);
-      /*- Maximum number of iterations for Brueckner orbitals optimization -*/
-      options.add_int("BRUECKNER_MAXITER", 20);
       /*- Convergence for the CC amplitudes.  Note that convergence is
           met only when E_CONVERGENCE and R_CONVERGENCE are satisfied. -*/
       options.add_double("R_CONVERGENCE", 1.0e-7);
@@ -44,15 +39,13 @@ int read_options(std::string name, Options& options)
       /*- Do use low memory option for triples contribution? Note that this 
           option is enabled automatically if the memory requirements of the 
           conventional algorithm would exceed the available resources -*/
-      options.add_bool("TRIPLES_LOW_MEMORY",false);
+      //options.add_bool("TRIPLES_LOW_MEMORY",false);
       /*- Do compute triples contribution? !expert -*/
       options.add_bool("COMPUTE_TRIPLES", true);
-      /*- Do compute MP4 triples contribution? !expert -*/
-      options.add_bool("COMPUTE_MP4_TRIPLES", false);
-      /*- Do use MP2 NOs to truncate virtual space for QCISD/CCSD and (T)? -*/
+      /*- Do use MP2 NOs to truncate virtual space for CCSD and (T)? -*/
       options.add_bool("NAT_ORBS", false);
-      /*- Cutoff for occupation of MP2 NO orbitals in FNO-QCISD/CCSD(T)
-          ( only valid if |fnocc__nat_orbs| = true ) -*/
+      /*- Cutoff for occupation of MP2 NO orbitals in FNO-CCSD(T)
+          ( only valid if |gpu_dfcc__nat_orbs| = true ) -*/
       options.add_double("OCC_TOLERANCE", 1.0e-6);
       /*- Do SCS-MP2? -*/
       options.add_bool("SCS_MP2", false);
@@ -69,26 +62,16 @@ int read_options(std::string name, Options& options)
       options.add_double("CC_SCALE_OS", 1.27);
       /*- Same-spin scaling factor for SCS-CCSD -*/
       options.add_double("CC_SCALE_SS",1.13);
-      /*- Use packed storage for the (ac|bd) diagram? only valid in MO -*/
-      options.add_bool("VABCD_PACKED",true);
-      /*- do only evaluate mp2 energy? !expert -*/
-      options.add_bool("RUN_MP2",false);
-      /*- do only evaluate mp3 energy? !expert -*/
-      options.add_bool("RUN_MP3",false);
-      /*- do only evaluate mp4 energy? !expert -*/
-      options.add_bool("RUN_MP3",false);
-      /*- do only evaluate mp4 energy? !expert -*/
-      options.add_bool("RUN_MP4",false);
-      /*- do ccsd rather than qcisd? !expert -*/
-      options.add_bool("RUN_CCSD",false);
 
       /*- Do use density fitting in CC? This keyword is used internally
           by the driver. Changing its value will have no effect on the 
-          computation. -*/
+          computation. ! expert -*/
       options.add_bool("DFCC",false);
       /*- Auxilliary basis for df-ccsd(t). -*/
       options.add_str("DF_BASIS_CC","");
-      /*- tolerance for Cholesky decomposition of the ERI tensor -*/
+      /*- Tolerance for Cholesky decomposition of the ERI tensor. 
+          ( only valid if |gpu_dfcc__df_basis_cc| = cholesky or 
+          |scf__scf_type|=cd -*/
       options.add_double("CHOLESKY_TOLERANCE",1.0e-4);
 
       /*- Is this a CEPA job? This parameter is used internally

@@ -23,13 +23,11 @@ def run_gpu_dfcc(name, **kwargs):
         ['GPU_DFCC','COMPUTE_TRIPLES'],
         ['GPU_DFCC','DFCC'],
         ['GPU_DFCC','NAT_ORBS'],
-        ['GPU_DFCC','RUN_CEPA'],
         ['SCF','DF_INTS_IO'],
         ['SCF','SCF_TYPE'])
 
     psi4.set_local_option('SCF','DF_INTS_IO', 'SAVE')
     psi4.set_local_option('GPU_DFCC','DFCC', True)
-    psi4.set_local_option('GPU_DFCC','RUN_CEPA', False)
 
     # throw an exception for open-shells
     if (psi4.get_option('SCF','REFERENCE') != 'RHF' ):
