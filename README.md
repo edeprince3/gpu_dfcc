@@ -3,7 +3,7 @@ GPU DF-CC plugin in PSI4
 
 OVERVIEW
 ---
-This plugin to Psi4 performs GPU-accelerated density-fitted (DF) singles and doubles coupled cluster (CCSD)
+This plugin to Psi4 performs GPU-accelerated density-fitted (DF) singles and doubles coupled cluster (CCSD)$^1$
 computations.  The perturbative triples contribution to the correlation energy (T) is also implemented, but
 the performace of (T) in the present plugin is not much better than that of the DF-CCSD(T) implementation in the
 current release of Psi4.
@@ -94,4 +94,13 @@ INPUT OPTIONS
     tolerance for Cholesky decomposition of the
     ERI tensor (only used if DF_BASIS_CC=cholesky or SCF_TYPE=cd).
 
+REFERENCES
+---
+[1] A. E. DePrince III, M. R. Kennedy, B. G. Sumpter, and C. D. Sherrill, *Mol. Phys.* **112**, 844 (2014). "Density-fitted singles and doubles coupled cluster on graphics processing units"
+
+[2] A. E. DePrince III and C. D. Sherrill, *J. Chem. Theory Comput.* **9**, 2687 (2013).
+"Accuracy and efficiency of coupled-cluster theory using density fitting / Cholesky decomposition, frozen natural orbitals, and a t1-transformed Hamiltonian"
+
+[3] A. E. DePrince III and C. David Sherrill, *J. Chem. Theory Comput.* **9**, 293 (2013).
+"Accurate noncovalent interaction energies using truncated basis sets based on frozen natural orbitals"
 
