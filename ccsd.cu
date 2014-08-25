@@ -170,6 +170,10 @@ GPUDFCoupledCluster::~GPUDFCoupledCluster()
 // this is where we'll set up cuda/gpu stuff i suppose
 void GPUDFCoupledCluster::common_init() {
 
+    long int nthreads = omp_get_max_threads();
+    if ( nthreads < 2 ) {
+        throw PsiException("GPU DFCC must be run with > 1 threads",__FILE__,__LINE__);
+    }
     /**
       *  GPU helper class knows if we have gpus or not and how to use them.
       *  all gpu memory is allocated by the helper.  
