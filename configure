@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# provide the location of the psi4 directory
+MY_TOP_SRCDIR=/scratch/deprince/psi4public/
+
+# provide the location of the psi4 object directory
+MY_TOP_OBJDIR=/scratch/deprince/psi4public/objdir
+
+# provide the location of the your cublas libraries
+# (also, make sure this directory is in your LD_LIBRARY_PATH)
+MY_CUDALIBS="-lcublas -L/usr/local/cuda/lib64/"
+
+# provide the name of your nvcc compiler
+MY_NVCC=nvcc
+
+cat Makefile.template | sed -e "s|MY_TOP_SRCDIR|${MY_TOP_SRCDIR}|g" \
+                            -e "s|MY_TOP_OBJDIR|${MY_TOP_OBJDIR}|g" \
+                            -e "s|MY_NVCC|${MY_NVCC}|g" \
+                            -e "s|MY_CUDALIBS|${MY_CUDALIBS}|g" > Makefile
+
