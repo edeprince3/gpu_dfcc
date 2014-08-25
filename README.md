@@ -16,7 +16,7 @@ To run the psi4 plugin gpu_dfcc:
 * Download and install psi4public from github.com:
 https://github.com/psi4/psi4public.  You can obtain the source using git::
 
-git clone git@github.com:psi4/psi4public.git
+   git clone git@github.com:psi4/psi4public.git
 
 Install psi4 as described on http://www.psicode.org/.
 
@@ -24,18 +24,18 @@ Install psi4 as described on http://www.psicode.org/.
 * Configure gpu_dfcc by editing the configure file in this directory.
 Specify the location of psi4 and your cublas library::
 
-./configure
+   ./configure
 
 Make sure that your LD_LIBRARY_PATH contains the location of your
 cublas library.
 
 * Compile the plugin::
 
-make
+   make
 
 * Run the test in this directory::
 
-psi4 input.dat -n 2
+   psi4 input.dat -n 2
 
 Note that plugin gpu_dfcc requires psi4 be run with at least two threads.
 In general, the code requires that you use one more thread than the number
