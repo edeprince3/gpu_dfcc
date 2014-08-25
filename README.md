@@ -43,7 +43,7 @@ Specify the location of psi4 and your cublas library:
 INPUT OPTIONS
 ---
 
-**NUM_GPUS** (int): 
+**NUM_GPUS** (int)
 
     the number of GPUs on your system.  The code will
     automatically determine the resources available.  This keyword is useful
