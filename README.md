@@ -102,7 +102,10 @@ INPUT OPTIONS
 
 KNOWN ISSUES
 ---
-The program tends to exit with an innocuous segfault.
+
+* The program tends to exit with an innocuous segfault.
+
+* Compilation with cuda 6.5 fails.  For now, we recommend cuda 5.5
 
 
 REFERENCES

@@ -27,7 +27,7 @@ CUDASRC = $(notdir $(wildcard *.cu))
 DEPENDINCLUDE = $(notdir $(wildcard *.h))
 
 CUDALIBS=MY_CUDALIBS 
-NVCCFLAGS = -arch sm_13 -Xcompiler -fopenmp --compiler-options '-fPIC' -O2
+CUDAFLAGS = MY_CUDAFLAGS
 NVCCINCLUDE=-I$(top_srcdir)/include -I$(top_objdir)/include -I$(top_srcdir)/src/lib -I$(top_objdir)/src/lib -DINSTALLEDPSIDATADIR=\"$(pkgdatadir)\" $(PYTHON_INCLUDE)
 
 BINOBJ = $(CXXSRC:%.cc=%.o)
@@ -51,7 +51,7 @@ NVCC=MY_NVCC
 %.o: %.cc
 	$(CXX) $(CXXFLAGS) $(CXXINCLUDE) -c $< $(OUTPUT_OPTION)
 %.o: %.cu
-	$(NVCC) $(NVCCFLAGS) $(NVCCINCLUDE) -c $< $(OUTPUT_OPTION)
+	$(NVCC) $(CUDAFLAGS) $(NVCCINCLUDE) -c $< $(OUTPUT_OPTION)
 
 $(PSITARGET): $(BINOBJ) $(CUDAOBJ)
 	$(NVCC) $(LDFLAGS) -o $@ $^ $(CXXDBG) $(PSILIBS)
