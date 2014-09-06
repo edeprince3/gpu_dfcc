@@ -1,6 +1,8 @@
 #
 #@BEGIN LICENSE
 #
+# GPU-accelerated density-fitted coupled-cluster, a plugin to:
+#
 # PSI4: an ab initio quantum chemistry software package
 #
 # This program is free software; you can redistribute it and/or modify
