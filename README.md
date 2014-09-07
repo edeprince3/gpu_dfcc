@@ -9,7 +9,8 @@ singles and doubles coupled cluster (CCSD)[2] computations.  The
 perturbative triples contribution to the correlation energy (T) is also
 implemented, but the performace of (T) in the present plugin is not much
 better than that of the DF-CCSD(T)[3,4] implementation in the current
-release of Psi4.
+release of Psi4.  For additional information regarding the performance of
+other GPU-accelerated coupled-cluster algorithms, see Refs. 5 and 6.
 
 INSTALLATION
 ---
@@ -120,3 +121,8 @@ REFERENCES
 [4] A. E. DePrince III and C. David Sherrill, *J. Chem. Theory Comput.* **9**, 293 (2013).
 "Accurate noncovalent interaction energies using truncated basis sets based on frozen natural orbitals"
 
+[5] A. E. DePrince III and J. R. Hammond, *J. Chem. Theory Comput.* **7**, 1287 (2011).
+"Coupled cluster theory on graphics processing units I: The coupled cluster doubles method"
+
+[6] A. E. DePrince III and J. R. Hammond, *2011 Symposium on Application Accelerators in High-Performance Computing (SAAHPC)*, 131-140 (2011).
+``Quantum chemical many-body theory on heterogeneous nodes''
