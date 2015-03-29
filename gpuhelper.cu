@@ -81,24 +81,24 @@ void GPUHelper::CudaInitGPU(Options&options){
      int gpu_id;
      cudaGetDevice(&gpu_id);
      cudaGetDeviceProperties( &cudaProp,gpu_id );
-     fprintf(outfile,
+     outfile->Printf(
        "\n  _________________________________________________________\n");
-     fprintf(outfile,"  CUDA device properties:\n");
-     fprintf(outfile,"  name:                 %20s\n",cudaProp.name);
-     fprintf(outfile,"  major version:        %20d\n",cudaProp.major);
-     fprintf(outfile,"  minor version:        %20d\n",cudaProp.minor);
-     fprintf(outfile,"  canMapHostMemory:     %20d\n",cudaProp.canMapHostMemory);
-     fprintf(outfile,"  totalGlobalMem:       %20lu mb\n",
+     outfile->Printf("  CUDA device properties:\n");
+     outfile->Printf("  name:                 %20s\n",cudaProp.name);
+     outfile->Printf("  major version:        %20d\n",cudaProp.major);
+     outfile->Printf("  minor version:        %20d\n",cudaProp.minor);
+     outfile->Printf("  canMapHostMemory:     %20d\n",cudaProp.canMapHostMemory);
+     outfile->Printf("  totalGlobalMem:       %20lu mb\n",
        cudaProp.totalGlobalMem/(1024*1024));
-     fprintf(outfile,"  sharedMemPerBlock:    %20lu\n",cudaProp.sharedMemPerBlock);
-     fprintf(outfile,"  clockRate:            %20.3f ghz\n",
+     outfile->Printf("  sharedMemPerBlock:    %20lu\n",cudaProp.sharedMemPerBlock);
+     outfile->Printf("  clockRate:            %20.3f ghz\n",
        cudaProp.clockRate/1.0e6);
-     fprintf(outfile,"  regsPerBlock:         %20d\n",cudaProp.regsPerBlock);
-     fprintf(outfile,"  warpSize:             %20d\n",cudaProp.warpSize);
-     fprintf(outfile,"  maxThreadsPerBlock:   %20d\n",cudaProp.maxThreadsPerBlock);
-     fprintf(outfile,
+     outfile->Printf("  regsPerBlock:         %20d\n",cudaProp.regsPerBlock);
+     outfile->Printf("  warpSize:             %20d\n",cudaProp.warpSize);
+     outfile->Printf("  maxThreadsPerBlock:   %20d\n",cudaProp.maxThreadsPerBlock);
+     outfile->Printf(
        "  _________________________________________________________\n\n");
-     fflush(outfile);
+     //fflush(outfile);
 
      gpumemory = cudaProp.totalGlobalMem;
 
@@ -116,9 +116,9 @@ void GPUHelper::CudaInitGPU(Options&options){
      }
      max_mapped_memory_per_thread = max_mapped_memory/(num_gpus+num_cpus);
 
-     fprintf(outfile,"\n");
-     fprintf(outfile,"  allocating gpu memory...");
-     fflush(outfile);
+     outfile->Printf("\n");
+     outfile->Printf("  allocating gpu memory...");
+     //fflush(outfile);
      tmp = (double**)malloc(num_gpus*sizeof(double*));
      gpubuffer = (double**)malloc(num_gpus*sizeof(double*));
      #pragma omp parallel for schedule (static) num_threads(num_gpus)
@@ -131,9 +131,9 @@ void GPUHelper::CudaInitGPU(Options&options){
          Check_CUDA_Error(stdout,"cudaSetDevice");
          cudaMallocHost((void**)&tmp[thread],max_mapped_memory_per_thread);  
          //tmp[thread] = (double*)malloc(max_mapped_memory_per_thread*sizeof(double));
-         Check_CUDA_Error(outfile,"cpu tmp");
+         Check_CUDA_Error(stdout,"cpu tmp");
          cudaMalloc((void**)&gpubuffer[thread],gpumemory-extraroom);
-         Check_CUDA_Error(outfile,"gpu memory");
+         Check_CUDA_Error(stdout,"gpu memory");
 
      }
      // thread-safe tiling info: TODO: these are never free'd at the end
@@ -150,9 +150,9 @@ void GPUHelper::CudaInitGPU(Options&options){
      mytilesizesN = (long int**)malloc(num_gpus*sizeof(long int*));
      mytilesizesK = (long int**)malloc(num_gpus*sizeof(long int*));
 
-     fprintf(outfile,"done.\n");
-     fprintf(outfile,"\n");
-     fflush(outfile);
+     outfile->Printf("done.\n");
+     outfile->Printf("\n");
+     //fflush(outfile);
 
      // some cpu memory for cores to use when stealing gpu work 
      //cpuarray = (double**)malloc(num_cpus*sizeof(double*));
@@ -178,9 +178,9 @@ void GPUHelper::CudaFinalizeGPU(Options&options){
          cudaSetDevice(thread);
          Check_CUDA_Error(stdout,"cudaSetDevice (free)");
          cudaFreeHost(tmp[thread]);
-         Check_CUDA_Error(outfile,"cpu tmp (free)");
+         Check_CUDA_Error(stdout,"cpu tmp (free)");
          cudaFree(gpubuffer[thread]);
-         Check_CUDA_Error(outfile,"gpu memory (free)");
+         Check_CUDA_Error(stdout,"gpu memory (free)");
      }
      free(tmp);
      free(gpubuffer);

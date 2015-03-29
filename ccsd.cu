@@ -356,7 +356,7 @@ void GPUDFCoupledCluster::Vabcd1(){
               break;
           }
       }
-      fprintf(outfile,"    <<< warning >>> tiling composite ij index (%5li tiles)\n",ntiles_ij);
+      outfile->Printf("    <<< warning >>> tiling composite ij index (%5li tiles)\n",ntiles_ij);
   }
   // sizes of ij tiles:
   long int * tilesize_ij = (long int *)malloc(ntiles_ij*sizeof(long int));
@@ -415,7 +415,7 @@ void GPUDFCoupledCluster::Vabcd1(){
           }
           tilesize[ntiles-1] = (v - a) - tilesize[0] * (ntiles - 1);
 
-          if (ntiles > 1) fprintf(outfile,"%5i/%5i ntiles %5i tilesize %5i\n",a,v,ntiles,tilesize[0]);fflush(stdout);
+          if (ntiles > 1) outfile->Printf("%5i/%5i ntiles %5i tilesize %5i\n",a,v,ntiles,tilesize[0]);fflush(stdout);
 
           for (long int tileb = 0; tileb < ntiles; tileb++) {
 
@@ -543,8 +543,8 @@ void GPUDFCoupledCluster::FinishVabcd1(){
               break;
           }
       }
-      //fprintf(outfile,"    <<< warning >>> tiling composite ij index (%5li tiles)\n",ntiles_ij);
-      //fprintf(outfile,"    <<< warning >>> tiling composite ij index (%5li tiles)\n",ntiles_ij);
+      //outfile->Printf("    <<< warning >>> tiling composite ij index (%5li tiles)\n",ntiles_ij);
+      //outfile->Printf("    <<< warning >>> tiling composite ij index (%5li tiles)\n",ntiles_ij);
       throw PsiException("  <<< warning >>> tiling composite ij index ... feature temporarily disabled",__FILE__,__LINE__);
   }
   // sizes of ij tiles:
@@ -598,7 +598,7 @@ void GPUDFCoupledCluster::FinishVabcd1(){
               }
               tilesize[ntiles-1] = (v - a) - tilesize[0] * (ntiles - 1);
 
-              if (ntiles > 1) fprintf(outfile,"%5i/%5i ntiles %5i tilesize %5i\n",a,v,ntiles,tilesize[0]);fflush(stdout);
+              if (ntiles > 1) outfile->Printf("%5i/%5i ntiles %5i tilesize %5i\n",a,v,ntiles,tilesize[0]);fflush(stdout);
 
               for (long int tileb = 0; tileb < ntiles; tileb++) {
 
@@ -694,7 +694,7 @@ void GPUDFCoupledCluster::FinishVabcd1(){
               }
               tilesize[ntiles-1] = (v - a) - tilesize[0] * (ntiles - 1);
 
-              if (ntiles > 1) fprintf(outfile,"%5i/%5i ntiles %5i tilesize %5i (cpu) \n",a,v,ntiles,tilesize[0]);fflush(stdout);
+              if (ntiles > 1) outfile->Printf("%5i/%5i ntiles %5i tilesize %5i (cpu) \n",a,v,ntiles,tilesize[0]);fflush(stdout);
 
               for (long int tileb = 0; tileb < ntiles; tileb++) {
 
@@ -782,22 +782,22 @@ void GPUDFCoupledCluster::CudaInit(){
   helper_->Check_CUDA_Error(stdout,"cudaGetDevice");
   cudaGetDeviceProperties( &cudaProp,gpu_id );
   helper_->Check_CUDA_Error(stdout,"cudaGetDeviceProperties");
-  fprintf(outfile,"\n");
-  fprintf(outfile,"  _________________________________________________________\n");
-  fprintf(outfile,"  CUDA device properties:\n");
-  fprintf(outfile,"  name:                 %20s\n",cudaProp.name);
-  fprintf(outfile,"  major version:        %20d\n",cudaProp.major);
-  fprintf(outfile,"  minor version:        %20d\n",cudaProp.minor);
-  fprintf(outfile,"  canMapHostMemory:     %20d\n",cudaProp.canMapHostMemory);
-  fprintf(outfile,"  totalGlobalMem:       %20lu mb\n",cudaProp.totalGlobalMem/(1024*1024));
-  fprintf(outfile,"  sharedMemPerBlock:    %20lu\n",cudaProp.sharedMemPerBlock);
-  fprintf(outfile,"  clockRate:            %20.3f ghz\n",cudaProp.clockRate/1.0e6);
-  fprintf(outfile,"  regsPerBlock:         %20d\n",cudaProp.regsPerBlock);
-  fprintf(outfile,"  warpSize:             %20d\n",cudaProp.warpSize);
-  fprintf(outfile,"  maxThreadsPerBlock:   %20d\n",cudaProp.maxThreadsPerBlock);
-  fprintf(outfile,"  _________________________________________________________\n");
-  fprintf(outfile,"\n");
-  fflush(outfile);
+  outfile->Printf("\n");
+  outfile->Printf("  _________________________________________________________\n");
+  outfile->Printf("  CUDA device properties:\n");
+  outfile->Printf("  name:                 %20s\n",cudaProp.name);
+  outfile->Printf("  major version:        %20d\n",cudaProp.major);
+  outfile->Printf("  minor version:        %20d\n",cudaProp.minor);
+  outfile->Printf("  canMapHostMemory:     %20d\n",cudaProp.canMapHostMemory);
+  outfile->Printf("  totalGlobalMem:       %20lu mb\n",cudaProp.totalGlobalMem/(1024*1024));
+  outfile->Printf("  sharedMemPerBlock:    %20lu\n",cudaProp.sharedMemPerBlock);
+  outfile->Printf("  clockRate:            %20.3f ghz\n",cudaProp.clockRate/1.0e6);
+  outfile->Printf("  regsPerBlock:         %20d\n",cudaProp.regsPerBlock);
+  outfile->Printf("  warpSize:             %20d\n",cudaProp.warpSize);
+  outfile->Printf("  maxThreadsPerBlock:   %20d\n",cudaProp.maxThreadsPerBlock);
+  outfile->Printf("  _________________________________________________________\n");
+  outfile->Printf("\n");
+  //fflush(outfile);
 
   // device memory left after some arrays (no, now total memory)
   int o = ndoccact;
@@ -841,7 +841,7 @@ void GPUDFCoupledCluster::AllocateGPUMemory(){
       helper_->Check_CUDA_Error(stdout,"cudaSetDevice");
 
       cudaMalloc((void**)&gpubuffer[thread],sizeof(double)*(left-wasted));
-      helper_->Check_CUDA_Error(outfile,"gpu memory");
+      helper_->Check_CUDA_Error(stdout,"gpu memory");
       printf("%5i %5i\n",thread,i);fflush(stdout);
 
   }
@@ -926,39 +926,39 @@ void GPUDFCoupledCluster::AllocateMemory() {
   total_memory       *= 8./1024./1024.;
   df_memory          *= 8./1024./1024.;
 
-  fprintf(outfile,"  Total memory requirements:       %9.2lf mb\n",df_memory+total_memory);
-  fprintf(outfile,"  3-index integrals:               %9.2lf mb\n",df_memory);
-  fprintf(outfile,"  CCSD intermediates:              %9.2lf mb\n",total_memory);
-  fprintf(outfile,"\n");
+  outfile->Printf("  Total memory requirements:       %9.2lf mb\n",df_memory+total_memory);
+  outfile->Printf("  3-index integrals:               %9.2lf mb\n",df_memory);
+  outfile->Printf("  CCSD intermediates:              %9.2lf mb\n",total_memory);
+  outfile->Printf("\n");
 
   if (1.0 * memory / 1024. / 1024. < total_memory + df_memory) {
-     fprintf(outfile,"\n");
-     fprintf(outfile,"  error: not enough memory for ccsd.  increase available memory by %7.2lf mb\n",total_memory+df_memory-1.0*memory/1024./1024.);
-     fprintf(outfile,"\n");
-     fflush(outfile);
+     outfile->Printf("\n");
+     outfile->Printf("  error: not enough memory for ccsd.  increase available memory by %7.2lf mb\n",total_memory+df_memory-1.0*memory/1024./1024.);
+     outfile->Printf("\n");
+     //fflush(outfile);
      throw PsiException("not enough memory (ccsd).",__FILE__,__LINE__);
   }
   if (options_.get_bool("COMPUTE_TRIPLES")) {
       long int nthreads = omp_get_max_threads();
       double tempmem = 8.*(2L*o*o*v*v+o*o*o*v+o*v+3L*v*v*v*nthreads);
       if (tempmem > memory) {
-          fprintf(outfile,"\n  <<< warning! >>> switched to low-memory (t) algorithm\n\n");
+          outfile->Printf("\n  <<< warning! >>> switched to low-memory (t) algorithm\n\n");
       }
       if (tempmem > memory || options_.get_bool("TRIPLES_LOW_MEMORY")){
          throw PsiException("low-memory triples option not yet implemented",__FILE__,__LINE__);
          isLowMemory = true;
          tempmem = 8.*(2L*o*o*v*v+o*o*o*v+o*v+5L*o*o*o*nthreads);
       }
-      fprintf(outfile,"  memory requirements for CCSD(T): %9.2lf mb\n\n",tempmem/1024./1024.);
+      outfile->Printf("  memory requirements for CCSD(T): %9.2lf mb\n\n",tempmem/1024./1024.);
   }
   cudaMallocHost((void**)&Qvv,nvirt*nvirt*nQ*sizeof(double));
   cudaThreadSynchronize();
-  helper_->Check_CUDA_Error(outfile,"allocate host Qvv");
+  helper_->Check_CUDA_Error(stdout,"allocate host Qvv");
 
   tempr = (double*)malloc(o*(o+1)*v*(v+1)/2*sizeof(double));
 
   cudaThreadSynchronize();
-  helper_->Check_CUDA_Error(outfile,"allocate host tempr");
+  helper_->Check_CUDA_Error(stdout,"allocate host tempr");
 
   // o*(o+1)*v mapped memory for each gpu:
   // for now, give the choice of using helper's or allocating more.  TODO:
@@ -977,7 +977,7 @@ void GPUDFCoupledCluster::AllocateMemory() {
           cudaSetDevice(thread);
           helper_->Check_CUDA_Error(stdout,"cudaSetDevice");
           cudaMallocHost((void**)&tempr2[thread],o*(o+1)*v*sizeof(double));
-          helper_->Check_CUDA_Error(outfile,"cpu tempr2");
+          helper_->Check_CUDA_Error(stdout,"cpu tempr2");
       }
   }
 
@@ -1087,7 +1087,7 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
             if (last_a == v) {
                 gpudone = true;
                 if (timer) {
-                    fprintf(outfile,"        A2 =      t(c,d,i,j) (ac|bd)                                    %6.2lf\n",omp_get_wtime()-start);
+                    outfile->Printf("        A2 =      t(c,d,i,j) (ac|bd)                                    %6.2lf\n",omp_get_wtime()-start);
                 }
             }
             else 
@@ -1153,7 +1153,7 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
 //                if ( omp_get_wtime() - wait > 5.0 ) {
 //                    accum += omp_get_wtime() - wait;
 //                    wait = omp_get_wtime();
-//                    fprintf(outfile,"gpu has taken an extra %6.2lf s\n",accum);
+//                    outfile->Printf("gpu has taken an extra %6.2lf s\n",accum);
 //                }
 //            }while(!gpudone);
 
@@ -1172,7 +1172,7 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
                 }
             }
             if (gpudone && gpuchunk > 0) {
-                fprintf(outfile,"gpu finished with %5li tiles left of C2 part 1\n",gpuchunk);
+                outfile->Printf("gpu finished with %5li tiles left of C2 part 1\n",gpuchunk);
                 helper_->GPUTiledDGEMM('t','n',o*v,gpuchunk*v,o*v,-0.5,tempv,o*v,tempt+odone*o*v*v,o*v,0.0,integrals+odone*o*v*v,o*v);
             }
 
@@ -1231,7 +1231,7 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
                 }
             }
             if (gpudone && gpuchunk > 0) {
-                fprintf(outfile,"gpu finished with %5li tiles left of C2 part 2\n",gpuchunk);
+                outfile->Printf("gpu finished with %5li tiles left of C2 part 2\n",gpuchunk);
                 helper_->GPUTiledDGEMM('t','n',o*v,gpuchunk*v,o*v,-1.0,integrals,o*v,tempt+odone*o*v*v,o*v,0.0,tempv+odone*o*v*v,o*v);
             }
 
@@ -1261,9 +1261,9 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
             psio->close(PSIF_DCC_R2,1);
             //printf("position 10 %20.12lf\n",omp_get_wtime()-start);fflush(stdout);
             if (timer) {
-                fprintf(outfile,"\n");
-                fprintf(outfile,"        C2 = -1/2 t(b,c,k,j) [ (ki|ac) - 1/2 t(a,d,l,i) (kd|lc) ]\n");
-                fprintf(outfile,"                + t(b,c,k,i) [ (kj|ac) - 1/2 t(a,d,l,j) (kd|lc) ]       %6.2lf\n",omp_get_wtime()-start);
+                outfile->Printf("\n");
+                outfile->Printf("        C2 = -1/2 t(b,c,k,j) [ (ki|ac) - 1/2 t(a,d,l,i) (kd|lc) ]\n");
+                outfile->Printf("                + t(b,c,k,i) [ (kj|ac) - 1/2 t(a,d,l,j) (kd|lc) ]       %6.2lf\n",omp_get_wtime()-start);
                 start = omp_get_wtime();
             }
 
@@ -1304,7 +1304,7 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
             F_DGEMM('n','t',o,v,v*nQ,1.0,tempv,o,integrals,v,1.0,w1,o);
 
             if (timer) {
-                fprintf(outfile,"        A1 =      U(c,d,k,l) (ad|kc)                                    %6.2lf\n",omp_get_wtime()-start);
+                outfile->Printf("        A1 =      U(c,d,k,l) (ad|kc)                                    %6.2lf\n",omp_get_wtime()-start);
                 start = omp_get_wtime();
             }
 
@@ -1334,7 +1334,7 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
             else F_DGEMM('t','n',o,v,o*o*v,-2.0,tempv,o*o*v,tempt,o*o*v,1.0,w1,o);
 
             if (timer) {
-                fprintf(outfile,"        B1 =    - U(a,c,k,l) (ki|lc)                                    %6.2lf\n",omp_get_wtime()-start);
+                outfile->Printf("        B1 =    - U(a,c,k,l) (ki|lc)                                    %6.2lf\n",omp_get_wtime()-start);
                 start = omp_get_wtime();
             }
 
@@ -1353,7 +1353,7 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
             }
 
             if (timer) {
-                fprintf(outfile,"        C1 =      F(k,c) U(a,c,i,k)                                     %6.2lf\n",omp_get_wtime()-start);
+                outfile->Printf("        C1 =      F(k,c) U(a,c,i,k)                                     %6.2lf\n",omp_get_wtime()-start);
                 start = omp_get_wtime();
             }
 
@@ -1398,7 +1398,7 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
 //                if ( omp_get_wtime() - wait > 5.0 ) {
 //                    accum += omp_get_wtime() - wait;
 //                    wait = omp_get_wtime();
-//                    fprintf(outfile,"gpu has taken an extra %6.2lf s\n",accum);
+//                    outfile->Printf("gpu has taken an extra %6.2lf s\n",accum);
 //                }
 //            }while(!gpudone);
 
@@ -1416,7 +1416,7 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
                 }
             }
             if (gpudone && gpuchunk > 0) {
-                fprintf(outfile,"gpu finished with %5li tiles left of D2 part 1\n",gpuchunk);
+                outfile->Printf("gpu finished with %5li tiles left of D2 part 1\n",gpuchunk);
                 helper_->GPUTiledDGEMM('n','n',o*v,gpuchunk*v,o*v,1.0,tempv,o*v,tempt+odone*o*v*v,o*v,0.0,integrals+odone*o*v*v,o*v);
             }
 
@@ -1482,7 +1482,7 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
                 }
             }
             if (gpudone && gpuchunk > 0) {
-                fprintf(outfile,"gpu finished with %5li tiles left of D2 part 2\n",gpuchunk);
+                outfile->Printf("gpu finished with %5li tiles left of D2 part 2\n",gpuchunk);
                 helper_->GPUTiledDGEMM('n','n',o*v,gpuchunk*v,o*v,0.5,tempt,o*v,integrals+odone*o*v*v,o*v,0.0,tempv+odone*o*v*v,o*v);
             }
 
@@ -1508,7 +1508,7 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
             psio->write_entry(PSIF_DCC_R2,"residual",(char*)&tempt[0],o*o*v*v*sizeof(double));
             psio->close(PSIF_DCC_R2,1);
             if (timer) {
-                fprintf(outfile,"        D2 =  1/2 U(b,c,j,k) [ L(a,i,k,c) + 1/2 U(a,d,i,l) L(l,d,k,c) ] %6.2lf\n",omp_get_wtime()-start);
+                outfile->Printf("        D2 =  1/2 U(b,c,j,k) [ L(a,i,k,c) + 1/2 U(a,d,i,l) L(l,d,k,c) ] %6.2lf\n",omp_get_wtime()-start);
                 start = omp_get_wtime();
             }
 
@@ -1572,7 +1572,7 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
             psio->write_entry(PSIF_DCC_R2,"residual",(char*)&tempt[0],o*o*v*v*sizeof(double));
             psio->close(PSIF_DCC_R2,1);
             if (timer) {
-                fprintf(outfile,"        E2 =      t(a,c,i,j) [ F(b,c) - U(b,d,k,l) (ld|kc) ]            %6.2lf\n",omp_get_wtime()-start);
+                outfile->Printf("        E2 =      t(a,c,i,j) [ F(b,c) - U(b,d,k,l) (ld|kc) ]            %6.2lf\n",omp_get_wtime()-start);
                 start = omp_get_wtime();
             }
 
@@ -1613,7 +1613,7 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
             psio->write_entry(PSIF_DCC_R2,"residual",(char*)&integrals[0],o*o*v*v*sizeof(double));
             psio->close(PSIF_DCC_R2,1);
             if (timer) {
-                fprintf(outfile,"                - t(a,b,i,k) [ F(k,j) - U(c,d,l,j) (kd|lc) ]            %6.2lf\n",omp_get_wtime()-start);
+                outfile->Printf("                - t(a,b,i,k) [ F(k,j) - U(c,d,l,j) (kd|lc) ]            %6.2lf\n",omp_get_wtime()-start);
                 start = omp_get_wtime();
             }
 
@@ -1654,7 +1654,7 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
             psio->close(PSIF_DCC_R2,1);
 
             if (timer) {
-                fprintf(outfile,"        B2 =      t(a,b,k,l) [ (ki|lj) + t(c,d,i,j) (kc|ld) ]           %6.2lf\n",omp_get_wtime()-start);
+                outfile->Printf("        B2 =      t(a,b,k,l) [ (ki|lj) + t(c,d,i,j) (kc|ld) ]           %6.2lf\n",omp_get_wtime()-start);
                 start = omp_get_wtime();
             }
 
@@ -1708,10 +1708,10 @@ void GPUDFCoupledCluster::CCResidual(){
     // it is possible the gpu didn't finish its work.  check and finish with 
     // the CPU and the GPU together
     if (cpudone && !gpudone) {
-        //fprintf(outfile,"cpu finished first! %5i %5i\n",v,last_a);fflush(stdout);//exit(0);
+        //outfile->Printf("cpu finished first! %5i %5i\n",v,last_a);fflush(stdout);//exit(0);
         FinishVabcd1();
         if (timer) {
-            fprintf(outfile,"        A2 =      t(c,d,i,j) (ac|bd)                                    %6.2lf\n",omp_get_wtime()-start);
+            outfile->Printf("        A2 =      t(c,d,i,j) (ac|bd)                                    %6.2lf\n",omp_get_wtime()-start);
         }
     }
 

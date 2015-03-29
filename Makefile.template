@@ -1,7 +1,7 @@
 #
 #@BEGIN LICENSE
 #
-# GPU-accelerated density-fitted coupled-cluster, a plugin to:
+# gpu_dfcc by Eugene DePrince, a plugin to:
 #
 # PSI4: an ab initio quantum chemistry software package
 #
@@ -27,74 +27,65 @@
 #
 # You shouldn't need to modify anything in this file.
 #
-# Location of your PSI4 source
-top_srcdir = MY_TOP_SRCDIR
-# Location of your PSI4 install, by default as listed
-top_objdir = MY_TOP_OBJDIR
 
-# Start by figuring out whether we're on Linux or Mac (sorry, Mr. Gates)
-UNAME := $(shell uname)
+# The name of your plugin. Taken from the directory name.
+NAME = $(shell basename `pwd`)
 
-include $(top_objdir)/src/bin/MakeVars
-
-# Reset these values, MakeVars changes them to valud only valid in Psi4's objdir
-# Location of your PSI4 source
-top_srcdir = MY_TOP_SRCDIR
-# Location of your PSI4 install, by default as listed
-top_objdir = MY_TOP_OBJDIR
-
-PSITARGET = $(shell basename `pwd`).so
-PSILIBS = -L$(top_objdir)/lib -lPSI_plugin
-
-CXXSRC = $(notdir $(wildcard *.cc))
+# C++ source files for your plugin. By default we grab all *.cc files.
+CXXSRC  = $(notdir $(wildcard *.cc))
 CUDASRC = $(notdir $(wildcard *.cu))
-DEPENDINCLUDE = $(notdir $(wildcard *.h))
 
-CUDALIBS=MY_CUDALIBS 
-CUDAFLAGS = MY_CUDAFLAGS
-NVCCINCLUDE=-I$(top_srcdir)/include -I$(top_objdir)/include -I$(top_srcdir)/src/lib -I$(top_objdir)/src/lib -DINSTALLEDPSIDATADIR=\"$(pkgdatadir)\" $(PYTHON_INCLUDE)
+# Flags that were used to compile Psi4.
+CXX = /theoryfs2/common/software/intel2015/composer_xe_2015.0.090/bin/intel64/icpc
+CXXDEFS = -DFC_SYMBOL=2 -DHAVE_MKL_LAPACK -DHAVE_MKL_BLAS -DHAS_CXX11_VARIADIC_TEMPLATES -DHAS_CXX11_STATIC_ASSERT -DHAS_CXX11_SIZEOF_MEMBER -DHAS_CXX11_RVALUE_REFERENCES -DHAS_CXX11_NULLPTR -DHAS_CXX11_LONG_LONG -DHAS_CXX11_LAMBDA -DHAS_CXX11_INITIALIZER_LIST -DHAS_CXX11_DECLTYPE -DHAS_CXX11_CSTDINT_H -DHAS_CXX11_CONSTEXPR -DHAS_CXX11_AUTO_RET_TYPE -DHAS_CXX11_AUTO -DHAS_CXX11_FUNC -DHAS_CXX11 -DSYS_LINUX
+CXXFLAGS = -DRESTRICT=__restrict__ -Xlinker -export-dynamic -fPIC -std=c++11 -mkl=parallel -openmp -O3 -no-prec-div -DNDEBUG -xHost
+INCLUDES = -I/theoryfs2/ds/deprince/psi4/build-release/src/lib -I/theoryfs2/ds/deprince/psi4/src/lib -I/theoryfs2/ds/deprince/psi4/include -I/theoryfs2/ds/deprince/psi4/build-release/include -I/theoryfs2/ds/deprince/psi4/build-release/boost/include -I/usr/include/python2.7 -I/usr/include -I/usr/include -I/usr/include -I/usr/include
+OBJDIR = MY_TOP_OBJDIR
 
-BINOBJ = $(CXXSRC:%.cc=%.o)
-CUDAOBJ = $(CUDASRC:%.cu=%.o)
+# Used to determine linking flags.
+UNAME = $(shell uname)
 
+# Need to link against Psi4 plugin library
+PSIPLUGIN = -L$(OBJDIR)/lib -lplugin
+
+DEPENDINCLUDE = $(notdir $(wildcard *.h*))
+
+PSITARGET = $(NAME).so
+
+# Start the compilation rules
 default:: $(PSITARGET)
+
+# Cuda libraries:
+CUDALIBS = MY_CUDALIBS
+CUDAFLAGS = MY_CUDAFLAGS
+NVCCINCLUDE=-I$(top_srcdir)/include -I$(OBJDIR)/include -I$(OBJDIR)/src/lib $(INCLUDES)
 
 # Add the flags needed for shared library creation
 ifeq ($(UNAME), Linux)
     LDFLAGS = -shared $(CUDALIBS)
-
 endif
 ifeq ($(UNAME), Darwin)
     LDFLAGS = -shared -undefined dynamic_lookup $(CUDALIBS)
-    CXXOTH += -fno-common
+    CXXFLAGS += -fno-common
 endif
 
+# The object files
+BINOBJ  = $(CXXSRC:%.cc=%.o)
+CUDAOBJ = $(CUDASRC:%.cu=%.o)
+
+# nvidia compiler
 NVCC=MY_NVCC
 
-# The object files
 %.o: %.cc
-	$(CXX) $(CXXFLAGS) $(CXXINCLUDE) -c $< $(OUTPUT_OPTION)
+	$(CXX) $(CXXDEFS) $(CXXFLAGS) $(INCLUDES) -c $<
+
 %.o: %.cu
 	$(NVCC) $(CUDAFLAGS) $(NVCCINCLUDE) -c $< $(OUTPUT_OPTION)
 
 $(PSITARGET): $(BINOBJ) $(CUDAOBJ)
 	$(NVCC) $(LDFLAGS) -o $@ $^ $(CXXDBG) $(PSILIBS)
 
-
 # Erase all compiled intermediate files
 clean:
-	rm -f $(BINOBJ) $(CUDAOBJ) $(PSITARGET) *.d *.pyc *.test output.dat psi.timer.dat
-
-# Dependency handling
-%.d: %.cc
-	$(CXXDEPEND) $(CXXDEPENDFLAGS) $(CXXFLAGS) $(CXXINCLUDE) $< | sed 's/^$*.o/$*.o $*.d/g' > $(@F)
-%.d: %.cu
-	$(NVCC) $(CXXDEPEND) $(CXXDEPENDFLAGS) $(CXXFLAGS) $(CXXINCLUDE) $< | sed 's/^$*.o/$*.o $*.d/g' > $(@F)
-
-ifneq ($(DODEPEND),no)
-$(BINOBJ:%.o=%.d): $(DEPENDINCLUDE)
-include $(BINOBJ:%.o=%.d)
-$(CUDAOBJ:%.o=%.d): $(DEPENDINCLUDE)
-include $(CUDAOBJ:%.o=%.d)
-endif
+	rm -f $(CUDAOBJ) $(BINOBJ) $(PSITARGET) *.d *.pyc *.test output.dat psi.timer.dat
 

@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # provide the location of the psi4 directory
-MY_TOP_SRCDIR=/theoryfs2/ds/sherrill/psi4
+MY_TOP_SRCDIR=/theoryfs2/ds/deprince/psi4/
 
 # provide the location of the psi4 object directory
-MY_TOP_OBJDIR=/theoryfs2/ds/sherrill/psi4/build-icpc-rhel7
+MY_TOP_OBJDIR=/theoryfs2/ds/deprince/psi4/
 
 # provide the location of the your cublas libraries
 # (also, make sure this directory is in your LD_LIBRARY_PATH)
-MY_CUDALIBS="-lcublas -L/usr/local/cuda-5.5/lib64/"
+MY_CUDALIBS="-lcublas -L/usr/local/cuda-6.5/lib64/"
 
 # provide the name of your nvcc compiler
 MY_NVCC=nvcc
