@@ -1,0 +1,55 @@
+# gpu_dfccConfig.cmake
+# -----------------------
+#
+# gpu_dfcc cmake module.
+# This module sets the following variables in your project::
+#
+#   gpu_dfcc_FOUND - true if gpu_dfcc and all required components found on the system
+#   gpu_dfcc_VERSION - gpu_dfcc version in format Major.Minor.Release
+#   gpu_dfcc_LIBRARIES - gpu_dfcc library to link against.
+#   gpu_dfcc_LIBRARY - same as LIBRARIES
+#
+#
+# Available components: None
+#
+#
+# Exported targets::
+#
+# If gpu_dfcc is found, this module defines the following :prop_tgt:`IMPORTED`
+# target. ::
+#
+#   gpu_dfcc::gpu_dfcc - the main gpu_dfcc library
+#
+#
+# Suggested usage::
+#
+#   find_package(gpu_dfcc)
+#   find_package(gpu_dfcc 0.5 EXACT CONFIG REQUIRED)
+#
+#
+# The following variables can be set to guide the search for this package::
+#
+#   gpu_dfcc_DIR - CMake variable, set to directory containing this Config file
+#   CMAKE_PREFIX_PATH - CMake variable, set to root directory of this package
+##   PATH - environment variable, set to bin directory of this package
+#   CMAKE_DISABLE_FIND_PACKAGE_gpu_dfcc - CMake variable, disables
+#     find_package(gpu_dfcc) when not REQUIRED, perhaps to force internal build
+
+@PACKAGE_INIT@
+
+set(PN gpu_dfcc)
+
+check_required_components(${PN})
+
+#-----------------------------------------------------------------------------
+# Don't include targets if this file is being picked up by another
+# project which has already built this as a subproject
+#-----------------------------------------------------------------------------
+if(NOT TARGET ${PN}::gpu_dfcc)
+    include("${CMAKE_CURRENT_LIST_DIR}/${PN}Targets.cmake")
+
+    get_property(_loc TARGET ${PN}::gpu_dfcc PROPERTY LOCATION)
+    set(${PN}_LIBRARY ${_loc})
+    set(${PN}_LIBRARIES ${_loc})
+endif()
+
