@@ -22,13 +22,15 @@
  *@END LICENSE
  */
 
-#include<../bin/fnocc/blas.h>
+#include"blas.h"
 #include"gpuhelper.h"
 #define CUDA
 
-using namespace psi;
-using namespace boost;
+#include <omp.h>
 
+using namespace psi;
+using namespace std;
+using namespace fnocc;
 namespace psi{ namespace fnocc{
 
 GPUHelper::GPUHelper()

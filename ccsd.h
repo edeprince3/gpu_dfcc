@@ -25,15 +25,17 @@
 #ifndef PLUGIN_CCSD_H
 #define PLUGIN_CCSD_H
 
+#include<psi4/libpsi4util/PsiOutStream.h>
+
 #include<pthread.h>
-#include <sys/types.h>
-#include<psi4-dec.h>
-#include<libiwl/iwl.h>
-#include<libpsio/psio.hpp>
-#include<libpsio/psio.h>
-#include<libmints/wavefunction.h>
-#include<psifiles.h>
-#include<../bin/fnocc/ccsd.h>
+#include<sys/types.h>
+#include<psi4/psi4-dec.h>
+#include<psi4/libiwl/iwl.h>
+#include<psi4/libpsio/psio.hpp>
+#include<psi4/libpsio/psio.h>
+#include<psi4/libmints/wavefunction.h>
+#include<psi4/psifiles.h>
+
 #include<sys/times.h>
 #include"gpuhelper.h"
 
@@ -41,6 +43,9 @@
 #include<cuda.h>
 #include<cublas.h>
 #include<cuda_runtime.h>
+
+// header for DFCoupledCluster
+#include"dfcc_fnocc.h"
 
 typedef struct {
         int id;
@@ -52,7 +57,7 @@ namespace psi{ namespace fnocc{
 class GPUDFCoupledCluster : public DFCoupledCluster{
 
   public:
-    GPUDFCoupledCluster(boost::shared_ptr<psi::Wavefunction>wfn,Options&options);
+    GPUDFCoupledCluster(std::shared_ptr<psi::Wavefunction>wfn,Options&options);
     ~GPUDFCoupledCluster();
 
     virtual bool same_a_b_orbs() const { return true; }
@@ -130,7 +135,7 @@ class GPUDFCoupledCluster : public DFCoupledCluster{
     long int last_a;
 
 
-    boost::shared_ptr<GPUHelper> helper_;
+    std::shared_ptr<GPUHelper> helper_;
     //__global__ void GPUKernel_Iqdb(int a,int v,int nQ,double * in,double * out);
 
 };

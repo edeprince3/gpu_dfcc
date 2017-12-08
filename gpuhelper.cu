@@ -22,31 +22,26 @@
  *@END LICENSE
  */
 
-#include <libplugin/plugin.h>
-#include"psi4-dec.h"
-#include<boost/shared_ptr.hpp>
-#include<liboptions/liboptions.h>
-#include<libqt/qt.h>
-#include<libtrans/integraltransform.h>
-#include<libtrans/mospace.h>
-#include<libmints/matrix.h>
-#include<libmints/vector.h>
-#include<libchkpt/chkpt.h>
-#include<libiwl/iwl.h>
-#include <libpsio/psio.hpp>
-#ifdef _OPENMP
-  #include<omp.h>
-#else
-  #define omp_get_thread_num() 0
-  #define omp_get_num_threads() 1
-#endif
+// TODO: interleaved dgemm seems to be broken
+bool interleaved_dgemm = true;
 
-#include<../bin/fnocc/blas.h>
+#include<psi4/libplugin/plugin.h>
+#include<psi4/psi4-dec.h>
+#include<psi4/liboptions/liboptions.h>
+#include<psi4/libqt/qt.h>
+#include<psi4/libtrans/integraltransform.h>
+#include<psi4/libtrans/mospace.h>
+#include<psi4/libmints/matrix.h>
+#include<psi4/libmints/vector.h>
+#include<psi4/libiwl/iwl.h>
+#include<psi4/libpsio/psio.hpp>
+#include<psi4/libpsi4util/process.h>
+#include"blas.h"
 #include"gpuhelper.h"
 #include"gpuonly.h"
-
+#include<omp.h>
 using namespace psi;
-using namespace boost;
+using namespace std;
 
 namespace psi{namespace fnocc{
 
@@ -69,6 +64,8 @@ void GPUHelper::CudaInitGPU(Options&options){
   max_mapped_memory=0;
   num_gpus=gpumemory=extraroom=0;
   int n;
+  size_t free;
+  size_t total;
   cudaGetDeviceCount(&n);
   num_gpus = n;
   num_cpus=0;
@@ -100,10 +97,12 @@ void GPUHelper::CudaInitGPU(Options&options){
        "  _________________________________________________________\n\n");
      //fflush(outfile);
 
-     gpumemory = cudaProp.totalGlobalMem;
-
-     extraroom = 200L*1024L*1024L;
+     //gpumemory = cudaProp.totalGlobalMem;
      
+     
+     cudaMemGetInfo(&free,&total);
+     gpumemory = free; 
+     extraroom = 200L*1024L*1024L;
      cudaThreadExit();
 
      // default memory for mapped cpu memory is the sum of all gpu memory
@@ -119,7 +118,7 @@ void GPUHelper::CudaInitGPU(Options&options){
      outfile->Printf("\n");
      outfile->Printf("  allocating gpu memory...");
      //fflush(outfile);
-     tmp = (double**)malloc(num_gpus*sizeof(double*));
+     tmp = (double**)malloc(num_gpus*sizeof(double*));   
      gpubuffer = (double**)malloc(num_gpus*sizeof(double*));
      #pragma omp parallel for schedule (static) num_threads(num_gpus)
      for (long int i=0; i<num_gpus; i++){
@@ -132,7 +131,9 @@ void GPUHelper::CudaInitGPU(Options&options){
          cudaMallocHost((void**)&tmp[thread],max_mapped_memory_per_thread);  
          //tmp[thread] = (double*)malloc(max_mapped_memory_per_thread*sizeof(double));
          Check_CUDA_Error(stdout,"cpu tmp");
+         //cudaMemGetInfo(&free,&total);
          cudaMalloc((void**)&gpubuffer[thread],gpumemory-extraroom);
+    //     cudaMalloc((void**)&gpubuffer[thread],gpumemory-extraroom);   
          Check_CUDA_Error(stdout,"gpu memory");
 
      }
@@ -150,8 +151,6 @@ void GPUHelper::CudaInitGPU(Options&options){
      mytilesizesN = (long int**)malloc(num_gpus*sizeof(long int*));
      mytilesizesK = (long int**)malloc(num_gpus*sizeof(long int*));
 
-     outfile->Printf("done.\n");
-     outfile->Printf("\n");
      //fflush(outfile);
 
      // some cpu memory for cores to use when stealing gpu work 
@@ -213,7 +212,8 @@ void GPUHelper::GPU_DGEMM(char transa,char transb,long int m,long int n,long int
 void GPUHelper::GPU_DGEMM_2DTile_nn_threaded_WithCpuStealing(char transa,char transb,long int m,long int n,long int k,double alpha,double*A,long int lda,double*B,long int ldb,double beta,double*C,long int ldc){
 
   throw PsiException("GPU_DGEMM_2DTile_nn_threaded_WithCpuStealing: not implemented",__FILE__,__LINE__);
-
+//DPG commented out to remove statement unreachable warning
+/*
   TilingWithCpuStealing((gpumemory-extraroom)/8L,max_mapped_memory_per_thread/8L,m,n,k);
   //Tiling((gpumemory-extraroom)/8L,max_mapped_memory/num_gpus/8L,m,n,k);
 
@@ -374,7 +374,9 @@ void GPUHelper::GPU_DGEMM_2DTile_nn_threaded_WithCpuStealing(char transa,char tr
   free(tilesizesM);
   free(tilesizesN);
   free(tilesizesK);
+*/
 }
+
 /**
  * dgemm using a 2-dimensional tile - threaded versions for multiple gpus
  */
@@ -419,19 +421,17 @@ void GPUHelper::GPU_DGEMM_2DTile_nn_threaded(char transa,char transb,long int m,
       cudaMemset((void*)gpuC,'\0',tilesizesM[tm]*tilesizesN[tn]*sizeof(double));
       omp_set_nested(1);
       omp_set_dynamic(0);
-if (1) {
+if (interleaved_dgemm) {
       // create streams:
       cudaStream_t stream1;
-      cudaError_t result1;
-      result1 = cudaStreamCreate(&stream1);
+      cudaStreamCreate(&stream1);
       cudaEvent_t estart1,estop1;
       cudaEventCreate(&estart1);
       cudaEventCreate(&estop1);
       cublasSetKernelStream(stream1);
 
       cudaStream_t stream2;
-      cudaError_t result2;
-      result2 = cudaStreamCreate(&stream2);
+      cudaStreamCreate(&stream2);
       cudaEvent_t estart2,estop2;
       cudaEventCreate(&estart2);
       cudaEventCreate(&estop2);
@@ -568,7 +568,8 @@ void GPUHelper::GPU_DGEMM_2DTile_nt_threaded_WithCpuStealing(char transa,char tr
 
 
   throw PsiException("GPU_DGEMM_2DTile_nt_threaded_WithCpuStealing: not implemented",__FILE__,__LINE__);
-
+//DPG commented out to remove statement unreachable warning
+/*
   //Tiling((gpumemory-extraroom)/8L,max_mapped_memory/num_gpus/8L,m,n,k);
   TilingWithCpuStealing((gpumemory-extraroom)/8L,max_mapped_memory_per_thread/8L,m,n,k);
 
@@ -734,6 +735,7 @@ void GPUHelper::GPU_DGEMM_2DTile_nt_threaded_WithCpuStealing(char transa,char tr
   free(tilesizesM);
   free(tilesizesN);
   free(tilesizesK);
+*/
 }
 void GPUHelper::GPU_DGEMM_2DTile_nt_threaded(char transa,char transb,long int m,long int n,long int k,double alpha,double*A,long int lda,double*B,long int ldb,double beta,double*C,long int ldc){
 
@@ -744,6 +746,7 @@ void GPUHelper::GPU_DGEMM_2DTile_nt_threaded(char transa,char transb,long int m,
      memset((void*)C,'\0',n*ldc*sizeof(double));
   else           
      for (long int i=0; i<n*ldc; i++) C[i] *= beta;
+
 
   omp_set_nested(1);
   omp_set_dynamic(0);
@@ -769,19 +772,17 @@ void GPUHelper::GPU_DGEMM_2DTile_nt_threaded(char transa,char transb,long int m,
 
       omp_set_nested(1);
       omp_set_dynamic(0);
-if (1){
+if (interleaved_dgemm) {
       // create streams:
       cudaStream_t stream1;
-      cudaError_t result1;
-      result1 = cudaStreamCreate(&stream1);
+      cudaStreamCreate(&stream1);
       cudaEvent_t estart1,estop1;
       cudaEventCreate(&estart1);
       cudaEventCreate(&estop1);
       cublasSetKernelStream(stream1);
 
       cudaStream_t stream2;
-      cudaError_t result2;
-      result2 = cudaStreamCreate(&stream2);
+      cudaStreamCreate(&stream2);
       cudaEvent_t estart2,estop2;
       cudaEventCreate(&estart2);
       cudaEventCreate(&estop2);
@@ -794,18 +795,15 @@ if (1){
       }
       cudaMemcpyAsync(gpuA,tmp[thread],tilesizesM[tm]*tilesizesK[0]*sizeof(double),cudaMemcpyHostToDevice,stream1);
       cudaStreamSynchronize(stream1);
-      for (long int i=0; i<tilesizesK[0]; i++){
+     for (long int i=0; i<tilesizesK[0]; i++){
           C_DCOPY(tilesizesN[tn],B+(i+0*tilesizeK)*ldb+tn*tilesizeN,1,tmp[thread]+i*tilesizesN[tn],1);
       }
       cudaMemcpyAsync(gpuB,tmp[thread],tilesizesN[tn]*tilesizesK[0]*sizeof(double),cudaMemcpyHostToDevice,stream1);
       cudaStreamSynchronize(stream1);
-
       for (long int tk=0; tk<ntilesK; tk++){
-
-          #pragma omp parallel num_threads(2)
-          {
-
-              long int thread2 = omp_get_thread_num();
+	#pragma omp parallel num_threads(2)
+	{
+              int thread2 = omp_get_thread_num();
               if (thread2 == 0) {
 
                   double * A_curr = ( tk % 2 == 0 ) ? gpuA : gpuA + offsetA;
@@ -818,7 +816,7 @@ if (1){
 
               } else {
                   // only copy next tiles if we need them:
-                  if ( tk < ntilesK - 1 ) {
+                  if ( tk < ntilesK - 1) {
                       double * A_next = ( tk % 2 == 0 ) ? gpuA + offsetA : gpuA;
                       double * B_next = ( tk % 2 == 0 ) ? gpuB + offsetB : gpuB;
                       cudaEventRecord(estart2,stream2);
@@ -916,7 +914,8 @@ void GPUHelper::GPU_DGEMM_2DTile_nt(char transa,char transb,long int m,long int 
 void GPUHelper::GPU_DGEMM_2DTile_tn_threaded_WithCpuStealing(char transa,char transb,long int m,long int n,long int k,double alpha,double*A,long int lda,double*B,long int ldb,double beta,double*C,long int ldc){
 
   throw PsiException("GPU_DGEMM_2DTile_tn_threaded_WithCpuStealing: not implemented",__FILE__,__LINE__);
-
+//DPG commented out to remove statement unreachable warning
+/*
   //Tiling((gpumemory-extraroom)/8L,max_mapped_memory/num_gpus/8L,m,n,k);
   TilingWithCpuStealing((gpumemory-extraroom)/8L,max_mapped_memory_per_thread/8L,m,n,k);
 
@@ -1075,6 +1074,7 @@ void GPUHelper::GPU_DGEMM_2DTile_tn_threaded_WithCpuStealing(char transa,char tr
   free(tilesizesM);
   free(tilesizesN);
   free(tilesizesK);
+*/
 }
 void GPUHelper::GPU_DGEMM_2DTile_tn_threaded(char transa,char transb,long int m,long int n,long int k,double alpha,double*A,long int lda,double*B,long int ldb,double beta,double*C,long int ldc){
 
@@ -1109,18 +1109,17 @@ void GPUHelper::GPU_DGEMM_2DTile_tn_threaded(char transa,char transb,long int m,
     
       omp_set_nested(1);
       omp_set_dynamic(0);
-if (1){
+if (interleaved_dgemm) {
+      // create streams:
       cudaStream_t stream1;
-      cudaError_t result1;
-      result1 = cudaStreamCreate(&stream1);
+      cudaStreamCreate(&stream1);
       cudaEvent_t estart1,estop1;
       cudaEventCreate(&estart1);
       cudaEventCreate(&estop1);
       cublasSetKernelStream(stream1);
 
       cudaStream_t stream2;
-      cudaError_t result2;
-      result2 = cudaStreamCreate(&stream2);
+      cudaStreamCreate(&stream2);
       cudaEvent_t estart2,estop2;
       cudaEventCreate(&estart2);
       cudaEventCreate(&estop2);
@@ -1259,7 +1258,8 @@ void GPUHelper::GPU_DGEMM_2DTile_tn(char transa,char transb,long int m,long int 
 void GPUHelper::GPU_DGEMM_2DTile_tt_threaded_WithCpuStealing(char transa,char transb,long int m,long int n,long int k,double alpha,double*A,long int lda,double*B,long int ldb,double beta,double*C,long int ldc){
 
   throw PsiException("GPU_DGEMM_2DTile_tt_threaded_WithCpuStealing: not implemented",__FILE__,__LINE__);
-
+//DPG commented out to remove statement unreachable warning
+/*
   //Tiling((gpumemory-extraroom)/8L,max_mapped_memory/num_gpus/8L,m,n,k);
   TilingWithCpuStealing((gpumemory-extraroom)/8L,max_mapped_memory_per_thread/8L,m,n,k);
 
@@ -1412,6 +1412,7 @@ void GPUHelper::GPU_DGEMM_2DTile_tt_threaded_WithCpuStealing(char transa,char tr
   free(tilesizesM);
   free(tilesizesN);
   free(tilesizesK);
+*/
 }
 // TODO: not thoroughly tested yet.
 void GPUHelper::GPU_DGEMM_2DTile_tt_threaded(char transa,char transb,long int m,long int n,long int k,double alpha,double*A,long int lda,double*B,long int ldb,double beta,double*C,long int ldc){
@@ -1448,18 +1449,17 @@ void GPUHelper::GPU_DGEMM_2DTile_tt_threaded(char transa,char transb,long int m,
       // create streams:
       omp_set_nested(1);
       omp_set_dynamic(0);
-if (1){
+if (interleaved_dgemm) {
+      // create streams:
       cudaStream_t stream1;
-      cudaError_t result1;
-      result1 = cudaStreamCreate(&stream1);
+      cudaStreamCreate(&stream1);
       cudaEvent_t estart1,estop1;
       cudaEventCreate(&estart1);
       cudaEventCreate(&estop1);
       cublasSetKernelStream(stream1);
 
       cudaStream_t stream2;
-      cudaError_t result2;
-      result2 = cudaStreamCreate(&stream2);
+      cudaStreamCreate(&stream2);
       cudaEvent_t estart2,estop2;
       cudaEventCreate(&estart2);
       cudaEventCreate(&estop2);
@@ -1684,7 +1684,6 @@ void GPUHelper::TilingNoThread(long int mem1,long int mem2,long int m,long int n
   mytilesizesN[thread][myntilesN[thread]-1L] = mylasttileN[thread];
   mytilesizesK[thread][myntilesK[thread]-1L] = mylasttileK[thread];
 
-  //printf("%5li %5li %5li (n^5)\n",ntilesM,ntilesN,ntilesK);fflush(stdout);
 
 }
 void GPUHelper::Tiling(long int mem1,long int mem2,long int m,long int n,long int k){
@@ -1694,6 +1693,7 @@ void GPUHelper::Tiling(long int mem1,long int mem2,long int m,long int n,long in
   tilesizeM = m;
   tilesizeK = k;
   ntilesM=ntilesN=ntilesK=1L;
+
   while(tilesizeN*tilesizeM+tilesizeK*(tilesizeN+tilesizeM)>mem1){
      if (ntilesN*ntilesM<num_gpus){
         if (tilesizeN>tilesizeM){
@@ -1827,15 +1827,20 @@ void GPUHelper::Tiling(long int mem1,long int mem2,long int m,long int n,long in
   //ntilesM *= 2;
   //tilesizeM = m/ntilesM;
   //if (m/ntilesM<(double)m/ntilesM) tilesizeM++;
+
+
+//AED - something is wrong with the tiling ... 
   if (ntilesK < 4)  {
       ntilesK = 8;
       tilesizeK = k/ntilesK;
       if (k/ntilesK<(double)k/ntilesK) tilesizeK++;
-  }else{
+  }
+    else{
       ntilesK *= 2;
       tilesizeK = k/ntilesK;
       if (k/ntilesK<(double)k/ntilesK) tilesizeK++;
   }
+//AED
 
   lasttileN = n - (ntilesN-1L)*tilesizeN;
   lasttileM = m - (ntilesM-1L)*tilesizeM;
@@ -1850,7 +1855,6 @@ void GPUHelper::Tiling(long int mem1,long int mem2,long int m,long int n,long in
   tilesizesM[ntilesM-1L] = lasttileM;
   tilesizesN[ntilesN-1L] = lasttileN;
   tilesizesK[ntilesK-1L] = lasttileK;
-//printf("%5i %5i %5i\n",k,tilesizeK,lasttileK);
 }
 void GPUHelper::TilingWithCpuStealing(long int mem1,long int mem2,long int m,long int n,long int k){
   // compute normal tiling
@@ -1951,7 +1955,7 @@ void GPUHelper::DGEMM_Timings() {
     GPUTiledDGEMM('t','n',m,n,k,1.0,A,m,B,n,0.0,C,m);
     cudaThreadSynchronize();
     double end = omp_get_wtime();
-    printf("%5li %20.12lf\n",10,m*n*k*2.0/(end-start)/1024./1024./1024.);
+    printf("%5i %20.12lf\n",10,m*n*k*2.0/(end-start)/1024./1024./1024.);
     fflush(stdout);
     for (long int i = 1; i < 81; i++) {
         m = n = k = 250 * i;
@@ -1968,7 +1972,7 @@ void GPUHelper::DGEMM_Timings() {
     GPUTiledDGEMM('n','t',m,n,k,1.0,A,m,B,n,0.0,C,m);
     cudaThreadSynchronize();
     end = omp_get_wtime();
-    printf("%5li %20.12lf\n",10,m*n*k*2.0/(end-start)/1024./1024./1024.);
+    printf("%5i %20.12lf\n",10,m*n*k*2.0/(end-start)/1024./1024./1024.);
     fflush(stdout);
     for (long int i = 1; i < 81; i++) {
         m = n = k = 250 * i;
@@ -1985,7 +1989,7 @@ void GPUHelper::DGEMM_Timings() {
     GPUTiledDGEMM('t','t',m,n,k,1.0,A,m,B,n,0.0,C,m);
     cudaThreadSynchronize();
     end = omp_get_wtime();
-    printf("%5li %20.12lf\n",10,m*n*k*2.0/(end-start)/1024./1024./1024.);
+    printf("%5i %20.12lf\n",10,m*n*k*2.0/(end-start)/1024./1024./1024.);
     fflush(stdout);
     for (long int i = 1; i < 81; i++) {
         m = n = k = 250 * i;
@@ -2002,7 +2006,7 @@ void GPUHelper::DGEMM_Timings() {
     GPUTiledDGEMM('n','n',m,n,k,1.0,A,m,B,n,0.0,C,m);
     cudaThreadSynchronize();
     end = omp_get_wtime();
-    printf("%5li %20.12lf\n",10,m*n*k*2.0/(end-start)/1024./1024./1024.);
+    printf("%5i %20.12lf\n",10,m*n*k*2.0/(end-start)/1024./1024./1024.);
     fflush(stdout);
     for (long int i = 1; i < 81; i++) {
         m = n = k = 250 * i;

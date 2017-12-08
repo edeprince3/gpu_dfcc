@@ -23,25 +23,17 @@
  */
 
 #include"ccsd.h"
-#include<psiconfig.h>
-#include<../bin/fnocc/blas.h>
-#include<libmints/matrix.h>
-#include<libmints/molecule.h>
-#include<libmints/mints.h>
-#include<libciomr/libciomr.h>
-#include<libqt/qt.h>
+#include"blas.h"
+#include<psi4/libmints/matrix.h>
+#include<psi4/libmints/vector.h>
+#include<psi4/libmints/molecule.h>
+#include"gpuhelper.h"
+#include<psi4/libmints/mintshelper.h>
+#include<psi4/libciomr/libciomr.h>
+#include<psi4/libqt/qt.h>
+#include<psi4/libpsi4util/process.h>
+#include<omp.h>
 
-#define PSIF_CIM 273 // TODO: move to psifiles.h
-
-#ifdef _OPENMP
-    #include<omp.h>
-#else
-    #define omp_get_thread_num() 0
-    #define omp_set_num_threads(a)
-    #define omp_get_num_threads()
-    #define omp_set_dynamic(a)
-    #define omp_set_nested(a)
-#endif
 #ifdef HAVE_MKL
     #include<mkl.h>
 #else
@@ -181,7 +173,7 @@ using namespace psi;
 
 namespace psi{namespace fnocc{
 
-GPUDFCoupledCluster::GPUDFCoupledCluster(boost::shared_ptr<Wavefunction> reference_wavefunction, Options &options):
+GPUDFCoupledCluster::GPUDFCoupledCluster(std::shared_ptr<Wavefunction> reference_wavefunction, Options &options):
         DFCoupledCluster(reference_wavefunction,options)
 {
     common_init();
@@ -193,16 +185,11 @@ GPUDFCoupledCluster::~GPUDFCoupledCluster()
 
 // this is where we'll set up cuda/gpu stuff i suppose
 void GPUDFCoupledCluster::common_init() {
-
-    long int nthreads = omp_get_max_threads();
-    if ( nthreads < 2 ) {
-        throw PsiException("GPU DFCC must be run with > 1 threads",__FILE__,__LINE__);
-    }
     /**
       *  GPU helper class knows if we have gpus or not and how to use them.
       *  all gpu memory is allocated by the helper.  
       */
-    helper_ = boost::shared_ptr<GPUHelper>(new GPUHelper);
+    helper_ = std::shared_ptr<GPUHelper>(new GPUHelper);
 
     // get device parameters, allocate gpu memory and pinned cpu memory
     helper_->ndoccact = ndoccact;
@@ -216,7 +203,6 @@ void GPUDFCoupledCluster::common_init() {
     wasted    = helper_->extraroom / 8.0;
     num_gpus  = helper_->num_gpus;
 
-    long int o = ndoccact;
     long int v = nvirt;
     ngputhreads=NUMTHREADS;
     num=1;
@@ -234,7 +220,6 @@ void GPUDFCoupledCluster::common_init() {
     if (  options_.get_bool("DGEMM_TIMINGS")  ) {
         helper_->DGEMM_Timings();
     }
-
   
 }
 
@@ -248,7 +233,7 @@ void GPUDFCoupledCluster::useVabcd1(){
   long int otri = o*(o+1)/2;
   long int vtri = v*(v+1)/2;
 
-  boost::shared_ptr<PSIO> psio(new PSIO());
+  std::shared_ptr<PSIO> psio(new PSIO());
 
   psio->open(PSIF_DCC_R2,PSIO_OPEN_OLD);
   psio->read_entry(PSIF_DCC_R2,"residual",(char*)&tempv[0],o*o*v*v*sizeof(double));
@@ -319,7 +304,7 @@ void GPUDFCoupledCluster::Vabcd1(){
   long int otri = o*(o+1)/2;
   long int vtri = v*(v+1)/2;
 
-  boost::shared_ptr<PSIO> psio(new PSIO());
+  std::shared_ptr<PSIO> psio(new PSIO());
 
   #pragma omp parallel for schedule (static) num_threads(num_gpus)
   for (long int i=0; i<o; i++){
@@ -499,7 +484,7 @@ void GPUDFCoupledCluster::FinishVabcd1(){
   long int otri = o*(o+1)/2;
   long int vtri = v*(v+1)/2;
 
-  boost::shared_ptr<PSIO> psio(new PSIO());
+  std::shared_ptr<PSIO> psio(new PSIO());
 
   // need to build t2+/- for CPU to use
   #pragma omp parallel for schedule (static) num_threads(num_gpus)
@@ -530,7 +515,6 @@ void GPUDFCoupledCluster::FinishVabcd1(){
   if (o*o*v*v>dim)       dim = o*o*v*v;
   if (nQmax*v*v>dim)     dim = nQmax*v*v;
   if (nQmax*nso*nso>dim) dim = nQmax*nso*nso;
-  long int ndoubles_cpu = dim;
 
   // do we need to tile ij?
   if ( ndoubles < 0 ) {
@@ -598,7 +582,6 @@ void GPUDFCoupledCluster::FinishVabcd1(){
               }
               tilesize[ntiles-1] = (v - a) - tilesize[0] * (ntiles - 1);
 
-              if (ntiles > 1) outfile->Printf("%5i/%5i ntiles %5i tilesize %5i\n",a,v,ntiles,tilesize[0]);fflush(stdout);
 
               for (long int tileb = 0; tileb < ntiles; tileb++) {
 
@@ -842,7 +825,6 @@ void GPUDFCoupledCluster::AllocateGPUMemory(){
 
       cudaMalloc((void**)&gpubuffer[thread],sizeof(double)*(left-wasted));
       helper_->Check_CUDA_Error(stdout,"gpu memory");
-      printf("%5i %5i\n",thread,i);fflush(stdout);
 
   }
 
@@ -858,29 +840,18 @@ void GPUDFCoupledCluster::AllocateMemory() {
   nQ          = (int)Process::environment.globals["NAUX (CC)"];
   nQ_scf      = (int)Process::environment.globals["NAUX (SCF)"];
 
-  if (!reference_wavefunction_->isCIM()){
-      int count=0;
-      eps = (double*)malloc((ndoccact+nvirt)*sizeof(double));
-      boost::shared_ptr<Vector> eps_test = reference_wavefunction_->epsilon_a();
-      for (int h=0; h<nirrep_; h++){
-          for (int norb = frzcpi_[h]; norb<doccpi_[h]; norb++){
-              eps[count++] = eps_test->get(h,norb);
-          }
+  int count=0;
+  eps = (double*)malloc((ndoccact+nvirt)*sizeof(double));
+  std::shared_ptr<Vector> eps_test = reference_wavefunction_->epsilon_a();
+  for (int h=0; h<nirrep_; h++){
+      for (int norb = frzcpi_[h]; norb<doccpi_[h]; norb++){
+          eps[count++] = eps_test->get(h,norb);
       }
-      for (int h=0; h<nirrep_; h++){
-          for (int norb = doccpi_[h]; norb<nmopi_[h]-frzvpi_[h]; norb++){
-              eps[count++] = eps_test->get(h,norb);
-          }
+  }
+  for (int h=0; h<nirrep_; h++){
+      for (int norb = doccpi_[h]; norb<nmopi_[h]-frzvpi_[h]; norb++){
+          eps[count++] = eps_test->get(h,norb);
       }
-  }else{
-     // orbital energies in qt ordering:
-     long int count = 0;
-     eps = (double*)malloc((ndoccact+nvirt)*sizeof(double));
-     boost::shared_ptr<Vector> eps_test = reference_wavefunction_->CIMOrbitalEnergies();
-     for (int i = 0; i < ndoccact + nvirt; i++){
-         eps[i] = eps_test->get(0,i+nfzc);
-     }
-     eps_test.reset();
   }
 
   long int o = ndoccact;
@@ -946,8 +917,9 @@ void GPUDFCoupledCluster::AllocateMemory() {
       }
       if (tempmem > memory || options_.get_bool("TRIPLES_LOW_MEMORY")){
          throw PsiException("low-memory triples option not yet implemented",__FILE__,__LINE__);
-         isLowMemory = true;
-         tempmem = 8.*(2L*o*o*v*v+o*o*o*v+o*v+5L*o*o*o*nthreads);
+         //DPG commented out to remove unreachable warning
+	 //isLowMemory = true;
+         //tempmem = 8.*(2L*o*o*v*v+o*o*o*v+o*v+5L*o*o*o*nthreads);
       }
       outfile->Printf("  memory requirements for CCSD(T): %9.2lf mb\n\n",tempmem/1024./1024.);
   }
@@ -980,6 +952,7 @@ void GPUDFCoupledCluster::AllocateMemory() {
           helper_->Check_CUDA_Error(stdout,"cpu tempr2");
       }
   }
+
 
   // allocate some memory for 3-index tensors
   Qoo = (double*)malloc(ndoccact*ndoccact*nQmax*sizeof(double));
@@ -1026,7 +999,8 @@ void GPUDFCoupledCluster::AllocateMemory() {
   Ca = reference_wavefunction_->Ca()->pointer();
 
   // one-electron integrals
-  boost::shared_ptr<MintsHelper> mints(new MintsHelper());
+  std::shared_ptr<BasisSet> basis = reference_wavefunction_->basisset();
+  std::shared_ptr<MintsHelper> mints(new MintsHelper(basis,options_));
   H = mints->so_kinetic();
   H->add(mints->so_potential());
 
@@ -1071,6 +1045,7 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
         //////// start gpu section! ////////
         if (id==0)
         {
+// AED
             omp_set_num_threads(num_gpus);
     
             int nthreads = omp_get_max_threads();
@@ -1092,6 +1067,8 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
             }
             else 
                 gpudone = false;
+// AED
+//gpudone = false;
     
         //////// end gpu section! ////////
         } 
@@ -1099,7 +1076,10 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
         else
         {
 
+// AED
+///*
             int mythread = omp_get_thread_num();
+
             // pthread has NO idea what the right number of threads is ...
             int nthreads = ncputhreads;//omp_get_max_threads();
 
@@ -1172,7 +1152,6 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
                 }
             }
             if (gpudone && gpuchunk > 0) {
-                outfile->Printf("gpu finished with %5li tiles left of C2 part 1\n",gpuchunk);
                 helper_->GPUTiledDGEMM('t','n',o*v,gpuchunk*v,o*v,-0.5,tempv,o*v,tempt+odone*o*v*v,o*v,0.0,integrals+odone*o*v*v,o*v);
             }
 
@@ -1231,7 +1210,6 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
                 }
             }
             if (gpudone && gpuchunk > 0) {
-                outfile->Printf("gpu finished with %5li tiles left of C2 part 2\n",gpuchunk);
                 helper_->GPUTiledDGEMM('t','n',o*v,gpuchunk*v,o*v,-1.0,integrals,o*v,tempt+odone*o*v*v,o*v,0.0,tempv+odone*o*v*v,o*v);
             }
 
@@ -1255,7 +1233,7 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
             //printf("position 9 %20.12lf\n",omp_get_wtime()-start);fflush(stdout);
 
             // first contribution to residual 
-            boost::shared_ptr<PSIO> psio(new PSIO());
+            std::shared_ptr<PSIO> psio(new PSIO());
             psio->open(PSIF_DCC_R2,PSIO_OPEN_NEW);
             psio->write_entry(PSIF_DCC_R2,"residual",(char*)&tempt[0],o*o*v*v*sizeof(double));
             psio->close(PSIF_DCC_R2,1);
@@ -1416,7 +1394,6 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
                 }
             }
             if (gpudone && gpuchunk > 0) {
-                outfile->Printf("gpu finished with %5li tiles left of D2 part 1\n",gpuchunk);
                 helper_->GPUTiledDGEMM('n','n',o*v,gpuchunk*v,o*v,1.0,tempv,o*v,tempt+odone*o*v*v,o*v,0.0,integrals+odone*o*v*v,o*v);
             }
 
@@ -1482,7 +1459,6 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
                 }
             }
             if (gpudone && gpuchunk > 0) {
-                outfile->Printf("gpu finished with %5li tiles left of D2 part 2\n",gpuchunk);
                 helper_->GPUTiledDGEMM('n','n',o*v,gpuchunk*v,o*v,0.5,tempt,o*v,integrals+odone*o*v*v,o*v,0.0,tempv+odone*o*v*v,o*v);
             }
 
@@ -1659,10 +1635,11 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
             }
 
             cpudone = true;
+//*/
+//AED
         }
         //////// end cpu section! ////////
 
-       
 }
 
 void GPUDFCoupledCluster::CCResidual(){
@@ -1705,6 +1682,7 @@ void GPUDFCoupledCluster::CCResidual(){
     }
     free(threads);
 
+// AED
     // it is possible the gpu didn't finish its work.  check and finish with 
     // the CPU and the GPU together
     if (cpudone && !gpudone) {
@@ -1717,6 +1695,7 @@ void GPUDFCoupledCluster::CCResidual(){
 
     // use results of contraction of (ac|bd) and t2
     useVabcd1();
+// AED
 }
 
 // t1-transformed 3-index fock matrix (using 3-index integrals from SCF)
@@ -1728,18 +1707,10 @@ void GPUDFCoupledCluster::T1Fock(){
     // Ca_L = C(1-t1^T)
     // Ca_R = C(1+t1)
     double * Catemp = (double*)malloc(nso*full*sizeof(double));
-    if ( reference_wavefunction_->isCIM() ) {
-        boost::shared_ptr<PSIO> psio (new PSIO());
-        psio->open(PSIF_CIM,PSIO_OPEN_OLD);
-        psio->read_entry(PSIF_CIM,"C matrix",(char*)&Catemp[0],nso*full*sizeof(double));
-        psio->close(PSIF_CIM,1);
-        C_DCOPY(nso*full,&Catemp[0],1,Ca_L,1);
-        C_DCOPY(nso*full,&Catemp[0],1,Ca_R,1);
-    }else {
-        C_DCOPY(nso*full,&Ca[0][0],1,Ca_L,1);
-        C_DCOPY(nso*full,&Ca[0][0],1,Ca_R,1);
-        C_DCOPY(nso*full,&Ca[0][0],1,Catemp,1);
-    }
+    C_DCOPY(nso*full,&Ca[0][0],1,Ca_L,1);
+    C_DCOPY(nso*full,&Ca[0][0],1,Ca_R,1);
+    C_DCOPY(nso*full,&Ca[0][0],1,Catemp,1);
+   
 
     #pragma omp parallel for schedule (static)
     for (int mu = 0; mu < nso; mu++) {
@@ -1764,14 +1735,11 @@ void GPUDFCoupledCluster::T1Fock(){
     free(Catemp);
 
     // (Q|rs)
-    boost::shared_ptr<PSIO> psio(new PSIO());
+    std::shared_ptr<PSIO> psio(new PSIO());
     psio->open(PSIF_DCC_QSO,PSIO_OPEN_OLD);
     psio_address addr1  = PSIO_ZERO;
     psio_address addr2  = PSIO_ZERO;
-    psio_address addroo = PSIO_ZERO;
-    psio_address addrov = PSIO_ZERO;
     psio_address addrvo = PSIO_ZERO;
-    psio_address addrvv = PSIO_ZERO;
 
     long int nrows = 1;
     long int rowsize = nQ_scf;
@@ -1856,7 +1824,7 @@ void GPUDFCoupledCluster::T1Fock(){
             for (int k = 0; k < ndocc; k++) {
                 dum += integrals[q*full*full+k*full + k];
             }
-            F_DAXPY(full*full,2.0 * dum,integrals+q*full*full,1,temp3,1);
+            C_DAXPY(full*full,2.0 * dum,integrals+q*full*full,1,temp3,1);
         }
     }
     delete rowdims;
@@ -1897,9 +1865,9 @@ void GPUDFCoupledCluster::T1Fock(){
     for (int a = 0; a < v; a++) {
         eps[a+o] = Fab[a*v+a];
     }
-
     free(h);
     free(temp3);
+
 }
 
 // t1-transformed 3-index integrals
@@ -1911,18 +1879,9 @@ void GPUDFCoupledCluster::T1Integrals(){
     // Ca_L = C(1-t1^T)
     // Ca_R = C(1+t1)
     double * Catemp = (double*)malloc(nso*full*sizeof(double));
-    if ( reference_wavefunction_->isCIM() ) {
-        boost::shared_ptr<PSIO> psio (new PSIO());
-        psio->open(PSIF_CIM,PSIO_OPEN_OLD);
-        psio->read_entry(PSIF_CIM,"C matrix",(char*)&Catemp[0],nso*full*sizeof(double));
-        psio->close(PSIF_CIM,1);
-        C_DCOPY(nso*full,&Catemp[0],1,Ca_L,1);
-        C_DCOPY(nso*full,&Catemp[0],1,Ca_R,1);
-    }else {
-        C_DCOPY(nso*full,&Ca[0][0],1,Ca_L,1);
-        C_DCOPY(nso*full,&Ca[0][0],1,Ca_R,1);
-        C_DCOPY(nso*full,&Ca[0][0],1,Catemp,1);
-    }
+    C_DCOPY(nso*full,&Ca[0][0],1,Ca_L,1);
+    C_DCOPY(nso*full,&Ca[0][0],1,Ca_R,1);
+    C_DCOPY(nso*full,&Ca[0][0],1,Catemp,1);
 
     #pragma omp parallel for schedule (static)
     for (int mu = 0; mu < nso; mu++) {
@@ -1947,7 +1906,7 @@ void GPUDFCoupledCluster::T1Integrals(){
     free(Catemp);
 
     // (Q|rs)
-    boost::shared_ptr<PSIO> psio(new PSIO());
+    std::shared_ptr<PSIO> psio(new PSIO());
     psio->open(PSIF_DCC_QSO,PSIO_OPEN_OLD);
     psio_address addr1  = PSIO_ZERO;
     psio_address addrvo = PSIO_ZERO;
@@ -2015,6 +1974,59 @@ void GPUDFCoupledCluster::T1Integrals(){
     }
     delete rowdims;
     psio->close(PSIF_DCC_QSO,1);
+
+
+    // check mp2 energy
+    /*double * tints = (double*)malloc(o*o*v*v*sizeof(double));
+    memset((void*)tints,'\0',o*o*v*v*sizeof(double));
+    F_DGEMM('n','t',o*v,o*v,nQ,1.0,Qov,o*v,Qov,o*v,0.0,tints,o*v);
+    double e2 = 0.0;
+    for (int i = 0; i < o; i++) {
+        for (int j = 0; j < o; j++) {
+            for (int a = 0; a < v; a++) {
+                for (int b = 0; b < v; b++) {
+                    double dijab = (eps[i] + eps[j] - eps[a+o] - eps[b+o]);
+                    long int iajb = i*v*v*o + a*o*v + j*v + b;
+                    long int jaib = j*v*v*o + a*v*o + i*v + b;
+                    e2 += (2.0 * tints[iajb] - tints[jaib]) * tints[iajb] / dijab;
+                }
+            }
+        }
+    }
+    printf("mp2 energy %20.12lf\n",e2);
+    //exit(0);*/
+
+
+
+    // check ccsd energy
+  /*  F_DGEMM('n','t',o*v,o*v,nQ,1.0,Qov,o*v,Qov,o*v,0.0,integrals,o*v);
+
+    if (t2_on_disk){
+        std::shared_ptr<PSIO> psio (new PSIO());
+        psio->open(PSIF_DCC_T2,PSIO_OPEN_OLD);
+        psio->read_entry(PSIF_DCC_T2,"t2",(char*)&tempv[0],o*o*v*v*sizeof(double));
+        psio->close(PSIF_DCC_T2,1);
+        tb = tempv;
+    }
+    double energy = 0.0;
+    double mp2energy = 0.0;
+    for (long int a = 0; a < v; a++){
+        for (long int b = 0; b < v; b++){
+            for (long int i = 0; i < o; i++){
+                for (long int j = 0; j < o; j++){
+                    double dijab = (eps[i] + eps[j] - eps[a+o] - eps[b+o]);
+                    long int ijab = a*v*o*o + b*o*o + i*o + j;
+                    long int iajb = i*v*v*o + a*v*o + j*v + b;
+                    long int jaib = j*v*v*o + a*v*o + i*v + b;
+                    energy += (2.0*integrals[iajb]-integrals[jaib])*tb[ijab];
+                    mp2energy += (2.0*integrals[iajb]-integrals[jaib])*integrals[iajb]/dijab;
+                }
+            }
+        }
+    }
+    printf("ccsd energy %20.12lf\n",energy);
+    printf("mp2 energy  %20.12lf\n",mp2energy);
+*/
 }
 
 double GPUDFCoupledCluster::compute_energy() {
@@ -2057,13 +2069,13 @@ double GPUDFCoupledCluster::compute_energy() {
       long int o = ndoccact;
       long int v = nvirt;
 
-      if (!isLowMemory && !reference_wavefunction_->isCIM() ) {
+      if (!isLowMemory ) {
           // write (ov|vv) integrals, formerly E2abci, for (t)
           double *tempq = (double*)malloc(v*nQ*sizeof(double));
           // the buffer integrals was at least 2v^3, so these should definitely fit.
           double *Z     = (double*)malloc(v*v*v*sizeof(double));
           double *Z2    = (double*)malloc(v*v*v*sizeof(double));
-          boost::shared_ptr<PSIO> psio(new PSIO());
+          std::shared_ptr<PSIO> psio(new PSIO());
           psio->open(PSIF_DCC_ABCI,PSIO_OPEN_NEW);
           psio_address addr2 = PSIO_ZERO;
           for (long int i=0; i<o; i++){
@@ -2092,7 +2104,7 @@ double GPUDFCoupledCluster::compute_energy() {
           psio_address addr = PSIO_ZERO;
           double * temp1 = (double*)malloc(( nQ*v > o*v*v ? nQ*v : o*v*v)*sizeof(double));
           double * temp2 = (double*)malloc(o*v*v*sizeof(double));
-          boost::shared_ptr<PSIO> psio(new PSIO());
+          std::shared_ptr<PSIO> psio(new PSIO());
           psio->open(PSIF_DCC_ABCI4,PSIO_OPEN_NEW);
           for (long int a = 0; a < v; a++) {
               #pragma omp parallel for schedule (static)
@@ -2131,7 +2143,7 @@ double GPUDFCoupledCluster::compute_energy() {
               }
           }
       }
-      boost::shared_ptr<PSIO> psio(new PSIO());
+      std::shared_ptr<PSIO> psio(new PSIO());
       psio->open(PSIF_DCC_IJAK,PSIO_OPEN_NEW);
       psio->write_entry(PSIF_DCC_IJAK,"E2ijak",(char*)&temp2[0],o*o*o*v*sizeof(double));
       psio->close(PSIF_DCC_IJAK,1);
@@ -2152,7 +2164,6 @@ double GPUDFCoupledCluster::compute_energy() {
 
       ccmethod = 0;
       if (isLowMemory)                           status = lowmemory_triples();
-      else if (reference_wavefunction_->isCIM()) status = local_triples();
       else                                       status = triples();
 
       if (status == Failure){
@@ -2186,7 +2197,7 @@ void GPUDFCoupledCluster::UpdateT2(){
     long int o = ndoccact;
     long int rs = nmo;
 
-    boost::shared_ptr<PSIO> psio(new PSIO());
+    std::shared_ptr<PSIO> psio(new PSIO());
 
     // df (ai|bj)
     psio->open(PSIF_DCC_QSO,PSIO_OPEN_OLD);
@@ -2209,11 +2220,11 @@ void GPUDFCoupledCluster::UpdateT2(){
                 for (long int j=0; j<o; j++){
 
                     long int iajb = (a-o)*v*o*o+i*v*o+(b-o)*o+j;
-                    long int jaib = iajb + (i-j)*v*(1-v*o);
                     long int ijab = (a-o)*v*o*o+(b-o)*o*o+i*o+j;
 
                     double dijab = dabi-eps[j];
                     double tnew  = - (integrals[iajb] + tempv[ijab])/dijab;
+                    //double tnew  = - (integrals[iajb])/dijab;
                     //tempt[ijab]  = tnew;
                     tempv[ijab]  = tnew;
                 }

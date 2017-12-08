@@ -22,19 +22,17 @@
  *@END LICENSE
  */
 
-#include <libplugin/plugin.h>
-#include <psi4-dec.h>
-#include <libparallel/parallel.h>
-#include <liboptions/liboptions.h>
-#include <libmints/mints.h>
-#include <libpsio/psio.hpp>
-#include <../bin/fnocc/ccsd.h>
-#include <../bin/fnocc/frozen_natural_orbitals.h>
+#include <psi4/libplugin/plugin.h>
+#include <psi4/psi4-dec.h>
+#include <psi4/liboptions/liboptions.h>
+#include <psi4/libpsio/psio.hpp>
+#include "dfcc_fnocc.h"
+#include "frozen_natural_orbitals.h"
 #include "ccsd.h"
 
 INIT_PLUGIN
 
-using namespace boost;
+using namespace std;
 
 namespace psi{ namespace fnocc {
 
@@ -103,22 +101,23 @@ int read_options(std::string name, Options& options)
     return true;
 }
 
-extern "C" 
-PsiReturnType gpu_dfcc(Options& options)
+extern "C"
+SharedWavefunction gpu_dfcc(SharedWavefunction ref_wfn, Options& options)
 {
-    boost::shared_ptr<Wavefunction> wfn;
-    boost::shared_ptr<DFFrozenNO> fno(new DFFrozenNO(Process::environment.wavefunction(),options));
+    std::shared_ptr<Wavefunction> wfn;
+    std::shared_ptr<DFFrozenNO> fno(new DFFrozenNO(ref_wfn,options));
     fno->ThreeIndexIntegrals();
+
     if ( options.get_bool("NAT_ORBS") ) {
         fno->ComputeNaturalOrbitals();
-        wfn = (boost::shared_ptr<Wavefunction>)fno;
+        wfn = (std::shared_ptr<Wavefunction>)fno;
     }else {
-        wfn = Process::environment.wavefunction();
+        wfn = ref_wfn;
     }
-    boost::shared_ptr<GPUDFCoupledCluster> ccsd (new GPUDFCoupledCluster(wfn,options));
+    std::shared_ptr<GPUDFCoupledCluster> ccsd (new GPUDFCoupledCluster(wfn,options));
     ccsd->compute_energy();
 
-    return Success;
+    return (SharedWavefunction)ccsd;
 }
 
 }} // End namespaces

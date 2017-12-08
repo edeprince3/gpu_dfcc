@@ -23,19 +23,18 @@
  */
 
 #include"ccsd.h"
-#include<../bin/fnocc/blas.h>
-#include<libmints/wavefunction.h>
-#include<libqt/qt.h>
-#ifdef _OPENMP
-   #include<omp.h>
-#endif
+#include"blas.h"
+#include<psi4/libmints/wavefunction.h>
+#include<psi4/libqt/qt.h>
+#include<psi4/libpsi4util/process.h>
+#include<omp.h>
+
 
 using namespace psi;
 
 namespace psi{namespace fnocc{
 
 PsiReturnType GPUDFCoupledCluster::triples(){
-
   char*name = new char[10];
   char*space = new char[10];
   double fac;
@@ -123,7 +122,7 @@ PsiReturnType GPUDFCoupledCluster::triples(){
       Z2[i]     = (double*)malloc(v*v*v*sizeof(double));
   }
 
-  boost::shared_ptr<PSIO> psio(new PSIO());
+  std::shared_ptr<PSIO> psio(new PSIO());
 
   psio->open(PSIF_DCC_IJAK,PSIO_OPEN_OLD);
   psio->read_entry(PSIF_DCC_IJAK,"E2ijak",(char*)&E2ijak[0],o*o*o*v*sizeof(double));
@@ -178,7 +177,7 @@ PsiReturnType GPUDFCoupledCluster::triples(){
           thread = omp_get_thread_num();
       #endif
 
-      boost::shared_ptr<PSIO> mypsio(new PSIO());
+      std::shared_ptr<PSIO> mypsio(new PSIO());
       mypsio->open(PSIF_DCC_ABCI,PSIO_OPEN_OLD);
 
       psio_address addr = psio_get_address(PSIO_ZERO,(long int)k*v*v*v*sizeof(double));

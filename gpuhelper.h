@@ -25,12 +25,13 @@
 #ifndef GPUHELPER_H
 #define GPUHELPER_H
 
-#include<liboptions/liboptions.h>
+#include<psi4/liboptions/liboptions.h>
+#include<psi4/libpsi4util/PsiOutStream.h>
 
-#define NUMTHREADS 8
+#define NUMTHREADS 32
 #define MAXBLOCKS 65535
 
-namespace boost {
+namespace std {
 template<class T> class shared_ptr;
 }
 

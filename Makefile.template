@@ -39,7 +39,7 @@ CUDASRC = $(notdir $(wildcard *.cu))
 CXX = /theoryfs2/common/software/intel2015/composer_xe_2015.0.090/bin/intel64/icpc
 CXXDEFS = -DFC_SYMBOL=2 -DHAVE_MKL_LAPACK -DHAVE_MKL_BLAS -DHAS_CXX11_VARIADIC_TEMPLATES -DHAS_CXX11_STATIC_ASSERT -DHAS_CXX11_SIZEOF_MEMBER -DHAS_CXX11_RVALUE_REFERENCES -DHAS_CXX11_NULLPTR -DHAS_CXX11_LONG_LONG -DHAS_CXX11_LAMBDA -DHAS_CXX11_INITIALIZER_LIST -DHAS_CXX11_DECLTYPE -DHAS_CXX11_CSTDINT_H -DHAS_CXX11_CONSTEXPR -DHAS_CXX11_AUTO_RET_TYPE -DHAS_CXX11_AUTO -DHAS_CXX11_FUNC -DHAS_CXX11 -DSYS_LINUX
 CXXFLAGS = -DRESTRICT=__restrict__ -Xlinker -export-dynamic -fPIC -std=c++11 -mkl=parallel -openmp -O3 -no-prec-div -DNDEBUG -xHost
-INCLUDES = -I/theoryfs2/ds/deprince/psi4/build-release/src/lib -I/theoryfs2/ds/deprince/psi4/src/lib -I/theoryfs2/ds/deprince/psi4/include -I/theoryfs2/ds/deprince/psi4/build-release/include -I/theoryfs2/ds/deprince/psi4/build-release/boost/include -I/usr/include/python2.7 -I/usr/include -I/usr/include -I/usr/include -I/usr/include
+INCLUDES = -I/theoryfs2/ds/deprince/psi4/build-release/src/lib -I/theoryfs2/ds/deprince/psi4/src/lib -I/theoryfs2/ds/deprince/psi4/include -I/theoryfs2/ds/deprince/psi4/build-release/include -I/theoryfs2/ds/deprince/psi4/build-release/std/include -I/usr/include/python2.7 -I/usr/include -I/usr/include -I/usr/include -I/usr/include
 OBJDIR = MY_TOP_OBJDIR
 
 # Used to determine linking flags.
