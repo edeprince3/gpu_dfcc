@@ -783,7 +783,6 @@ void GPUDFCoupledCluster::CudaInit(){
   //fflush(outfile);
 
   // device memory left after some arrays (no, now total memory)
-  int o = ndoccact;
   int v = nvirt;
   left = cudaProp.totalGlobalMem/8.;// - 3*o*o*v*v - o*v-nmo*nmo;
   wasted = 200*1024*1024/8.; // leave an extra 200 mb on there.
@@ -1644,7 +1643,6 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
 
 void GPUDFCoupledCluster::CCResidual(){
     bool timer = options_.get_bool("CC_TIMINGS");
-    long int o = ndoccact;
     long int v = nvirt;
 
     // test new transposed storage of Qvv
@@ -1682,7 +1680,6 @@ void GPUDFCoupledCluster::CCResidual(){
     }
     free(threads);
 
-// AED
     // it is possible the gpu didn't finish its work.  check and finish with 
     // the CPU and the GPU together
     if (cpudone && !gpudone) {
@@ -1695,7 +1692,7 @@ void GPUDFCoupledCluster::CCResidual(){
 
     // use results of contraction of (ac|bd) and t2
     useVabcd1();
-// AED
+
 }
 
 // t1-transformed 3-index fock matrix (using 3-index integrals from SCF)
@@ -1739,7 +1736,6 @@ void GPUDFCoupledCluster::T1Fock(){
     psio->open(PSIF_DCC_QSO,PSIO_OPEN_OLD);
     psio_address addr1  = PSIO_ZERO;
     psio_address addr2  = PSIO_ZERO;
-    psio_address addrvo = PSIO_ZERO;
 
     long int nrows = 1;
     long int rowsize = nQ_scf;
