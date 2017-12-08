@@ -1,0 +1,14 @@
+#!/bin/bash
+
+rm -rf CMakeFiles/
+rm CMakeCache.txt
+rm cmake_install.cmake
+
+#CC=icc CXX=icpc FC=ifort cmake . -DPYTHON_EXECUTABLE=/usr/bin/python -DCMAKE_CXX_STANDARD_LIBRARIES="-L/usr/local/cuda-8.0/lib64/ -lcublas -lcudart -lcusolver"
+CC=icc CXX=icpc FC=ifort cmake . -DPYTHON_EXECUTABLE=/usr/bin/python -DCMAKE_CXX_STANDARD_LIBRARIES="-L/usr/local/cuda-6.0/lib64/ -lcublas -lcudart -lcusolver"
+
+
+#link_directories
+#link_libraries
+
+# -L/usr/local/cuda-8.0/lib64/ -lcublas -lcudart -lcusolver
