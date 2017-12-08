@@ -90,7 +90,12 @@ def run_gpu_dfcc(name, **kwargs):
     # psi4 run sequence 
     ref_wfn = kwargs.get('ref_wfn', None)
     if ref_wfn is None:
-	ref_wfn = psi4.driver.scf_helper(name, **kwargs)
+        ref_wfn = psi4.driver.scf_helper(name, use_c1=True, **kwargs)  # C1 certified
+    else:
+        if ref_wfn.molecule().schoenflies_symbol() != 'c1':
+            raise ValidationError("""  GPU-DFCC does not make use of molecular symmetry: """
+                                  """  reference wavefunction must be C1.\n""")
+
 
     aux_basis = psi4.core.BasisSet.build(ref_wfn.molecule(), "DF_BASIS_CC",
                                         psi4.core.get_global_option("DF_BASIS_CC"),
