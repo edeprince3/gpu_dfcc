@@ -21,7 +21,7 @@
  *
  *@END LICENSE
  */
-
+//include<iostream>
 #include"ccsd.h"
 #include"blas.h"
 #include<psi4/libmints/matrix.h>
@@ -33,7 +33,7 @@
 #include<psi4/libqt/qt.h>
 #include<psi4/libpsi4util/process.h>
 #include<omp.h>
-
+#include<stdio.h>
 #ifdef HAVE_MKL
     #include<mkl.h>
 #else
@@ -185,12 +185,17 @@ GPUDFCoupledCluster::~GPUDFCoupledCluster()
 
 // this is where we'll set up cuda/gpu stuff i suppose
 void GPUDFCoupledCluster::common_init() {
+
+    long int nthreads = omp_get_max_threads();
+    if ( nthreads < 2 ) {
+        throw PsiException("GPU DFCC must be run with > 1 threads",__FILE__,__LINE__);
+    }
+
     /**
       *  GPU helper class knows if we have gpus or not and how to use them.
       *  all gpu memory is allocated by the helper.  
       */
     helper_ = std::shared_ptr<GPUHelper>(new GPUHelper);
-
     // get device parameters, allocate gpu memory and pinned cpu memory
     helper_->ndoccact = ndoccact;
     helper_->nvirt    = nvirt;
@@ -1050,7 +1055,7 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
             int nthreads = omp_get_max_threads();
 
             #pragma omp parallel for schedule (static) num_threads(num_gpus)
-            for (int i = 0 ; i < num_gpus; i++) {
+            for (int i = 0 ; i <num_gpus; i++) {
                 int mythread = omp_get_thread_num();
                 cudaSetDevice(mythread);
             }
@@ -2027,7 +2032,6 @@ void GPUDFCoupledCluster::T1Integrals(){
 
 double GPUDFCoupledCluster::compute_energy() {
   PsiReturnType status = Success;
-
   //WriteBanner();
   AllocateMemory();
   status = CCSDIterations();
@@ -2060,11 +2064,9 @@ double GPUDFCoupledCluster::compute_energy() {
   Process::environment.globals["CCSD SAME-SPIN CORRELATION ENERGY"] = eccsd_ss;
   Process::environment.globals["CCSD TOTAL ENERGY"] = eccsd + escf;
   Process::environment.globals["CURRENT ENERGY"] = eccsd + escf;
-
   if (options_.get_bool("COMPUTE_TRIPLES")){
       long int o = ndoccact;
       long int v = nvirt;
-
       if (!isLowMemory ) {
           // write (ov|vv) integrals, formerly E2abci, for (t)
           double *tempq = (double*)malloc(v*nQ*sizeof(double));
@@ -2143,13 +2145,11 @@ double GPUDFCoupledCluster::compute_energy() {
       psio->open(PSIF_DCC_IJAK,PSIO_OPEN_NEW);
       psio->write_entry(PSIF_DCC_IJAK,"E2ijak",(char*)&temp2[0],o*o*o*v*sizeof(double));
       psio->close(PSIF_DCC_IJAK,1);
-
       // df (ov|ov) integrals, formerly E2klcd
       helper_->GPUTiledDGEMM('n','t',o*v,o*v,nQ,1.0,Qov,o*v,Qov,o*v,0.0,temp1,o*v);
       psio->open(PSIF_DCC_IAJB,PSIO_OPEN_NEW);
       psio->write_entry(PSIF_DCC_IAJB,"E2iajb",(char*)&temp1[0],o*o*v*v*sizeof(double));
       psio->close(PSIF_DCC_IAJB,1);
-
       free(Qov);
       free(Qoo);
       free(temp1);
@@ -2176,15 +2176,15 @@ double GPUDFCoupledCluster::compute_energy() {
   }else {
       free(Qoo);
       free(Qov);
-      free(Qvv);
+  //TODO DPG trying to comment out memory till it works
+  //    free(Qvv);
   }
-
   // free remaining memory
   free(Fia);
   free(Fai);
   free(t1);
   free(tb);
-
+  helper_->freecudamem();
   return Process::environment.globals["CURRENT ENERGY"];
 }
 
