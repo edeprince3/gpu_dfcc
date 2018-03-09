@@ -15,7 +15,7 @@ find_package(psi4 1.0 REQUIRED)
 # <<<  Options  >>>
 
 set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -dynamic -shared -Xcompiler --compiler-options -fopenmp '-fPIC' -O2 ${OpenMP_CXX_FLAGS}")
-
+set(CMAKE_CXX_STANDARD_LIBRARIES ${CUDA_LIBRARIES} "-lcublas -lcudart -lcusolver")
 include(psi4OptionsTools)
 
 option_with_print(ENABLE_OPENMP "Enable threadsafe linking to OpenMP parallelized programs." ON)
