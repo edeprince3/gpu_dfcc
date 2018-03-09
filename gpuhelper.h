@@ -131,6 +131,8 @@ class GPUHelper{
 
     long int ndoccact,nvirt,nmo,num_gpus;
 
+
+    void freecudamem();
 };
 }}
 

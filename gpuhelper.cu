@@ -71,13 +71,13 @@ void GPUHelper::CudaInitGPU(Options&options){
   num_cpus=0;
   if (options["NUM_GPUS"].has_changed())
      num_gpus = options.get_int("NUM_GPUS");
-
   if (num_gpus>0){
      cublasInit();
      struct cudaDeviceProp cudaProp;
      int gpu_id;
      cudaGetDevice(&gpu_id);
-     cudaGetDeviceProperties( &cudaProp,gpu_id );
+     for(int i=0;i<num_gpus;i++){
+     cudaGetDeviceProperties( &cudaProp,i );
      outfile->Printf(
        "\n  _________________________________________________________\n");
      outfile->Printf("  CUDA device properties:\n");
@@ -96,12 +96,12 @@ void GPUHelper::CudaInitGPU(Options&options){
      outfile->Printf(
        "  _________________________________________________________\n\n");
      //fflush(outfile);
-
+     }
      //gpumemory = cudaProp.totalGlobalMem;
      
      
      cudaMemGetInfo(&free,&total);
-     gpumemory = free; 
+     gpumemory = free;
      extraroom = 200L*1024L*1024L;
      cudaThreadExit();
 
@@ -114,7 +114,6 @@ void GPUHelper::CudaInitGPU(Options&options){
            max_mapped_memory = temp_mem;
      }
      max_mapped_memory_per_thread = max_mapped_memory/(num_gpus+num_cpus);
-
      outfile->Printf("\n");
      outfile->Printf("  allocating gpu memory...");
      //fflush(outfile);
@@ -132,7 +131,7 @@ void GPUHelper::CudaInitGPU(Options&options){
          //tmp[thread] = (double*)malloc(max_mapped_memory_per_thread*sizeof(double));
          Check_CUDA_Error(stdout,"cpu tmp");
          //cudaMemGetInfo(&free,&total);
-         cudaMalloc((void**)&gpubuffer[thread],gpumemory-extraroom);
+         cudaMalloc((void**)&gpubuffer[thread],(gpumemory-extraroom));
     //     cudaMalloc((void**)&gpubuffer[thread],gpumemory-extraroom);   
          Check_CUDA_Error(stdout,"gpu memory");
 
@@ -205,6 +204,20 @@ void GPUHelper::GPU_DGEMM(char transa,char transb,long int m,long int n,long int
   cudaFree(gpuA);
   cudaFree(gpuB);
   cudaFree(gpuC);
+}
+void GPUHelper::freecudamem(){
+  cudaFree(myntilesM);
+  cudaFree(myntilesN);
+  cudaFree(myntilesK);
+  cudaFree(mytilesizeM);
+  cudaFree(mytilesizeN);
+  cudaFree(mytilesizeK);
+  cudaFree(mylasttileM);
+  cudaFree(mylasttileN);
+  cudaFree(mylasttileK);
+  cudaFree(mytilesizesM);
+  cudaFree(mytilesizesN);
+  cudaFree(mytilesizesK);
 }
 /**
  * dgemm using a 2-dimensional tile - threaded versions for multiple gpus
@@ -1687,7 +1700,6 @@ void GPUHelper::TilingNoThread(long int mem1,long int mem2,long int m,long int n
 
 }
 void GPUHelper::Tiling(long int mem1,long int mem2,long int m,long int n,long int k){
-
   // first tile according to how much space is on gpu
   tilesizeN = n;
   tilesizeM = m;
