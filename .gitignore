@@ -1,0 +1,9 @@
+*.so
+*.pyc
+timer.dat
+output.dat
+CMakeCache.txt
+CMakeFiles
+cmake_install.cmake
+gpu_dfccConfig.cmake
+gpu_dfccConfigVersion.cmake

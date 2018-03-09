@@ -24,11 +24,11 @@ https://github.com/psi4/psi4public.  You can obtain the source using git:
 
     Install psi4 as described on http://www.psicode.org/.
 
-* Configure gpu_dfcc by editing the configure file in the gpu_dfcc/
-directory.  Specify the location of psi4 and your cublas library and run
+* Configure gpu_dfcc by editing the do-configure file in the gpu_dfcc/
+directory.  Specify the location of your cublas library and run
 the configure script:
 
-    > ./configure
+    > ./do-configure
 
     Make sure that your LD_LIBRARY_PATH contains the location of your
     cublas library.
@@ -106,7 +106,7 @@ KNOWN ISSUES
 
 * The program tends to exit with an innocuous segfault.
 
-* Compilation with cuda 6.5 fails.  For now, we recommend cuda 5.5
+* Compilation with cuda 6.5 fails.  For now, we recommend cuda 5.5, 8.0 or 9.0
 
 
 REFERENCES

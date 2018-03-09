@@ -48,7 +48,7 @@ PsiReturnType GPUDFCoupledCluster::triples(){
      fac = 2.0;
   }else{
      sprintf(name,"MP4");
-     sprintf(space,"");
+     //sprintf(space,"");
      fac = 0.0;
   }
 
