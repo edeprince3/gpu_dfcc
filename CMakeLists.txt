@@ -72,5 +72,3 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PN}Config.cmake
 install(EXPORT "${PN}Targets"
         NAMESPACE "${PN}::"
 DESTINATION ${CMAKECONFIG_INSTALL_DIR})
-
-
