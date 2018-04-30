@@ -23,3 +23,24 @@ target_link_libraries(gpu_dfcc
 
 set_target_properties(gpu_dfcc PROPERTIES PREFIX "")
 
+install(TARGETS gpu_dfcc
+        EXPORT "${PN}Targets"
+        LIBRARY DESTINATION ${PYMOD_INSTALL_FULLDIR})
+
+install(FILES __init__.py pymodule.py LICENSE README.md
+        DESTINATION ${PYMOD_INSTALL_FULLDIR})
+
+# GNUInstallDirs "DATADIR" wrong here; CMake search path wants "share".
+set(CMAKECONFIG_INSTALL_DIR "share/cmake/${PN}")
+configure_package_config_file(cmake/${PN}Config.cmake.in
+                              "${CMAKE_CURRENT_BINARY_DIR}/${PN}Config.cmake"
+                              INSTALL_DESTINATION ${CMAKECONFIG_INSTALL_DIR})
+write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/${PN}ConfigVersion.cmake
+                                 VERSION ${${PN}_VERSION}
+                                 COMPATIBILITY AnyNewerVersion)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PN}Config.cmake
+              ${CMAKE_CURRENT_BINARY_DIR}/${PN}ConfigVersion.cmake
+        DESTINATION ${CMAKECONFIG_INSTALL_DIR})
+install(EXPORT "${PN}Targets"
+        NAMESPACE "${PN}::"
+        DESTINATION ${CMAKECONFIG_INSTALL_DIR})
