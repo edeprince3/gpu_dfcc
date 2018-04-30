@@ -48,7 +48,7 @@ install(TARGETS gpu_dfcc
         EXPORT "${PN}Targets"
         LIBRARY DESTINATION ${PYMOD_INSTALL_FULLDIR})
 
-install(FILES __init__.py gpu_dfcc.so pymodule.py LICENSE README.md
+install(FILES __init__.py pymodule.py LICENSE README.md
         DESTINATION ${PYMOD_INSTALL_FULLDIR})
 
 install(DIRECTORY tests/
