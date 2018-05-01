@@ -41,7 +41,7 @@ def run_gpu_dfcc(name, **kwargs):
 
     lowername = name.lower()
     kwargs = p4util.kwargs_lower(kwargs)
-#kwarg = kwargs_lower(kwargs)
+
     # stash user options
     optstash = p4util.OptionsState(
          ['GPU_DFCC','COMPUTE_TRIPLES'],
@@ -56,20 +56,6 @@ def run_gpu_dfcc(name, **kwargs):
     # throw an exception for open-shells
     if (psi4.core.get_option('SCF','REFERENCE') != 'RHF' ):
         raise ValidationError("Error: %s requires \"reference rhf\"." % lowername)
-
-    # override symmetry: TODO!!! until this is fixed, you must include "symmetry c1" in the molecule group
-    #molecule = psi4.get_active_molecule()
-    #user_pg = molecule.schoenflies_symbol()
-    #molecule.reset_point_group('c1')
-    #molecule.fix_orientation(1)
-    #molecule.update_geometry()
-    #if user_pg != 'c1':
-    #    psi4.print_out('\n')
-    #    psi4.print_out('    <<< WARNING!!! >>>\n')
-    #    psi4.print_out('\n')
-    #    psi4.print_out('    plugin gpu_dfcc does not make use of molecular symmetry,\n')
-    #    psi4.print_out('    further calculations in C1 point group.\n')
-    #    psi4.print_out('\n')
 
     # triples?
     if (lowername == 'gpu-df-ccsd'):
@@ -100,9 +86,6 @@ def run_gpu_dfcc(name, **kwargs):
                                         psi4.core.get_global_option("DF_BASIS_CC"),
                                         "RIFIT", psi4.core.get_global_option("BASIS"))
     ref_wfn.set_basisset("DF_BASIS_CC", aux_basis)
-    psi4.core.set_local_option('GPU_DFCC','DF_BASIS_CC',aux_basis)
-
-
 
     #aux_basis = psi4.core.BasisSet.build(ref_wfn.molecule(), "DF_BASIS_CC",
     #                                    psi4.core.get_global_option("DF_BASIS_CC"),
