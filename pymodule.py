@@ -81,11 +81,6 @@ def run_gpu_dfcc(name, **kwargs):
     if psi4.core.has_option_changed('SCF','SCF_TYPE') == False:
        psi4.core.set_local_option('SCF','SCF_TYPE', 'DF')
 
-    # pick a df basis if the user didn't pick one
-    if psi4.core.get_option('GPU_DFCC','DF_BASIS_CC') == '':
-       basis   = psi4.core.get_global_option('BASIS')
-       dfbasis = corresponding_rifit(basis)
-
     # psi4 run sequence 
     ref_wfn = kwargs.get('ref_wfn', None)
     if ref_wfn is None:
