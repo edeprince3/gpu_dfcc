@@ -85,7 +85,6 @@ def run_gpu_dfcc(name, **kwargs):
     if psi4.core.get_option('GPU_DFCC','DF_BASIS_CC') == '':
        basis   = psi4.core.get_global_option('BASIS')
        dfbasis = corresponding_rifit(basis)
-       psi4.core.set_local_option('GPU_DFCC','DF_BASIS_CC',dfbasis)
 
     # psi4 run sequence 
     ref_wfn = kwargs.get('ref_wfn', None)
@@ -96,11 +95,24 @@ def run_gpu_dfcc(name, **kwargs):
             raise ValidationError("""  GPU-DFCC does not make use of molecular symmetry: """
                                   """  reference wavefunction must be C1.\n""")
 
+    scf_aux_basis = psi4.core.BasisSet.build(ref_wfn.molecule(), "DF_BASIS_SCF",
+                                        psi4.core.get_option("SCF", "DF_BASIS_SCF"),
+                                        "JKFIT", psi4.core.get_global_option('BASIS'),
+                                        puream=ref_wfn.basisset().has_puream())
+    ref_wfn.set_basisset("DF_BASIS_SCF", scf_aux_basis)
 
     aux_basis = psi4.core.BasisSet.build(ref_wfn.molecule(), "DF_BASIS_CC",
                                         psi4.core.get_global_option("DF_BASIS_CC"),
                                         "RIFIT", psi4.core.get_global_option("BASIS"))
     ref_wfn.set_basisset("DF_BASIS_CC", aux_basis)
+    psi4.core.set_local_option('GPU_DFCC','DF_BASIS_CC',aux_basis)
+
+
+
+    #aux_basis = psi4.core.BasisSet.build(ref_wfn.molecule(), "DF_BASIS_CC",
+    #                                    psi4.core.get_global_option("DF_BASIS_CC"),
+    #                                    "RIFIT", psi4.core.get_global_option("BASIS"))
+    #ref_wfn.set_basisset("DF_BASIS_CC", aux_basis)
 
     returnvalue = psi4.core.plugin('gpu_dfcc.so',ref_wfn)
 
