@@ -36,7 +36,7 @@ using namespace std;
 
 namespace psi{ namespace fnocc {
 
-extern "C" 
+extern "C" PSI_API 
 int read_options(std::string name, Options& options)
 {
     if (name == "GPU_DFCC"|| options.read_globals()) {
@@ -84,6 +84,7 @@ int read_options(std::string name, Options& options)
       options.add_double("CC_SCALE_OS", 1.27);
       /*- Same-spin scaling factor for SCS-CCSD -*/
       options.add_double("CC_SCALE_SS",1.13);
+      options.add_str("CC_TYPE","");
 
       /*- Do use density fitting in CC? This keyword is used internally
           by the driver. Changing its value will have no effect on the 
@@ -95,13 +96,14 @@ int read_options(std::string name, Options& options)
           ( only valid if |gpu_dfcc__df_basis_cc| = cholesky or 
           |scf__scf_type|=cd -*/
       options.add_double("CHOLESKY_TOLERANCE",1.0e-4);
-
+      options.add_str("SCF_TYPE","DF");
+      options.add_str("ACTIVE_GPUS","");
     }
 
     return true;
 }
 
-extern "C"
+extern "C" PSI_API
 SharedWavefunction gpu_dfcc(SharedWavefunction ref_wfn, Options& options)
 {
     std::shared_ptr<Wavefunction> wfn;

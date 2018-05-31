@@ -48,10 +48,12 @@ def run_gpu_dfcc(name, **kwargs):
          ['GPU_DFCC','DFCC'],
          ['GPU_DFCC','NAT_ORBS'],
          ['SCF','DF_INTS_IO'],
-         ['SCF','SCF_TYPE'])
+         ['SCF','SCF_TYPE'],
+         ['GPU_DFCC','CC_TYPE'])
 
     psi4.core.set_local_option('SCF','DF_INTS_IO', 'SAVE')
     psi4.core.set_local_option('GPU_DFCC','DFCC', True)
+    psi4.core.set_local_option('GPU_DFCC','CC_TYPE', 'DF')    
 
     # throw an exception for open-shells
     if (psi4.core.get_option('SCF','REFERENCE') != 'RHF' ):

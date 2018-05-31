@@ -185,29 +185,29 @@ GPUDFCoupledCluster::~GPUDFCoupledCluster()
 
 // this is where we'll set up cuda/gpu stuff i suppose
 void GPUDFCoupledCluster::common_init() {
-
-    long int nthreads = omp_get_max_threads();
-    if ( nthreads < 2 ) {
-        throw PsiException("GPU DFCC must be run with > 1 threads",__FILE__,__LINE__);
-    }
-
+    helper_ = std::shared_ptr<GPUHelper>(new GPUHelper);
     /**
       *  GPU helper class knows if we have gpus or not and how to use them.
       *  all gpu memory is allocated by the helper.  
       */
-    helper_ = std::shared_ptr<GPUHelper>(new GPUHelper);
     // get device parameters, allocate gpu memory and pinned cpu memory
     helper_->ndoccact = ndoccact;
     helper_->nvirt    = nvirt;
     helper_->nmo      = nmo;
-  
+
     helper_->CudaInit(options_);
+    long int nthreads = omp_get_max_threads();
+    if ( nthreads <= helper_->num_gpus ) {
+        throw PsiException("GPU DFCC must be run with at least 1 more thread than gpu",__FILE__,__LINE__);
+    }
+
+    //helper_->CudaInit(options_);
 
     gpubuffer = helper_->gpubuffer;
     left      = helper_->gpumemory / 8.0;
     wasted    = helper_->extraroom / 8.0;
     num_gpus  = helper_->num_gpus;
-
+    gpus_used = helper_->gpus_used;
     long int v = nvirt;
     ngputhreads=NUMTHREADS;
     num=1;
@@ -362,7 +362,7 @@ void GPUDFCoupledCluster::Vabcd1(){
       #pragma omp parallel for schedule (static) num_threads(num_gpus)
       for (int i = 0; i < num_gpus; i++) {
           int thread = omp_get_thread_num();
-          cudaSetDevice(thread);
+          cudaSetDevice(gpus_used[thread]);
           double * gput2 = gpubuffer[thread];
           cudaMemcpy(gput2,                    tempr + tile_ij * tilesize_ij[0] * vtri,              sizeof(double) * tilesize_ij[tile_ij] * vtri,cudaMemcpyHostToDevice);
           cudaMemcpy(gput2+tilesize_ij[0]*vtri,tempr + tile_ij * tilesize_ij[0] * vtri + otri * vtri,sizeof(double) * tilesize_ij[tile_ij] * vtri,cudaMemcpyHostToDevice);
@@ -382,7 +382,7 @@ void GPUDFCoupledCluster::Vabcd1(){
           cudaEventCreate(&estart);
           cudaEventCreate(&estop);
           int thread = omp_get_thread_num();
-          cudaSetDevice(thread);
+          cudaSetDevice(gpus_used[thread]);
           double * gput2 = gpubuffer[thread];
 
           // do we need to tile loop over b >= a?
@@ -564,7 +564,7 @@ void GPUDFCoupledCluster::FinishVabcd1(){
               cudaEvent_t estart,estop;
               cudaEventCreate(&estart);
               cudaEventCreate(&estop);
-              cudaSetDevice(thread);
+              cudaSetDevice(gpus_used[thread]);
               double * gput2 = gpubuffer[thread];
 
               // do we need to tile loop over b >= a?
@@ -812,7 +812,7 @@ void GPUDFCoupledCluster::CudaFinalize(){
   #pragma omp parallel for schedule (static) num_threads(num_gpus)
   for (int i=0; i<num_gpus; i++){ 
       int thread = omp_get_thread_num();
-      cudaSetDevice(thread);
+      cudaSetDevice(gpus_used[thread]);
       cudaFree(gpubuffer[thread]);
   }
   cudaDeviceReset();
@@ -824,7 +824,7 @@ void GPUDFCoupledCluster::AllocateGPUMemory(){
   for (int i=0; i<num_gpus; i++){ 
       int thread = omp_get_thread_num();
 
-      cudaSetDevice(thread);
+      cudaSetDevice(gpus_used[thread]);
       helper_->Check_CUDA_Error(stdout,"cudaSetDevice");
 
       cudaMalloc((void**)&gpubuffer[thread],sizeof(double)*(left-wasted));
@@ -950,7 +950,7 @@ void GPUDFCoupledCluster::AllocateMemory() {
           #ifdef _OPENMP
             thread = omp_get_thread_num();
           #endif
-          cudaSetDevice(thread);
+          cudaSetDevice(gpus_used[thread]);
           helper_->Check_CUDA_Error(stdout,"cudaSetDevice");
           cudaMallocHost((void**)&tempr2[thread],o*(o+1)*v*sizeof(double));
           helper_->Check_CUDA_Error(stdout,"cpu tempr2");
@@ -1057,7 +1057,7 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
             #pragma omp parallel for schedule (static) num_threads(num_gpus)
             for (int i = 0 ; i <num_gpus; i++) {
                 int mythread = omp_get_thread_num();
-                cudaSetDevice(mythread);
+                cudaSetDevice(gpus_used[mythread]);
             }
             double start = omp_get_wtime();
 

@@ -102,7 +102,10 @@ class GPUHelper{
     long int gputhresh;
     // pointers to gpu and mapped cpu memory
     double**gpubuffer,**tmp;
-
+    
+    //
+    std::vector<int> gpus_used;
+    
     // tiling
     void Tiling(long int mem1,long int mem2,long int m,long int n,long int k);
     void TilingWithCpuStealing(long int mem1,long int mem2,long int m,long int n,long int k);

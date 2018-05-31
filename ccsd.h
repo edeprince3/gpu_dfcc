@@ -126,6 +126,7 @@ class GPUDFCoupledCluster : public DFCoupledCluster{
 
     /// GPU-specific variables ... some are obsolete
     int num_gpus;
+    std::vector<int> gpus_used;
     double left, wasted;
     long int ovtilesize, novtiles, lastovtile, lastov2tile, ov2tilesize, nov2tiles;
     long int tilesize, ntiles, lasttile;

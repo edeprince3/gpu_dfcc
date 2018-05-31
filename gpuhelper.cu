@@ -66,18 +66,70 @@ void GPUHelper::CudaInitGPU(Options&options){
   int n;
   size_t free;
   size_t total;
+  struct cudaDeviceProp cudaProp;
+  std::vector<unsigned long> mem;
   cudaGetDeviceCount(&n);
   num_gpus = n;
   num_cpus=0;
   if (options["NUM_GPUS"].has_changed())
      num_gpus = options.get_int("NUM_GPUS");
-  if (num_gpus>0){
+  else{
+     unsigned long tmp_mem = 0;
+     long tmp_gpu = 0;
+     num_gpus = 1;
+     for(int i = 0; i < n; ++i){
+        cudaSetDevice(i);
+        cudaMemGetInfo(&free,&total);
+        if(free > tmp_mem){
+           tmp_mem = free;
+           tmp_gpu = i;
+        }
+     }
+     gpus_used.push_back(tmp_gpu);
+     mem.push_back(tmp_mem);
+  }
+  
+  if (num_gpus>0 && options["NUM_GPUS"].has_changed()){
      cublasInit();
-     struct cudaDeviceProp cudaProp;
      int gpu_id;
-     cudaGetDevice(&gpu_id);
+     //cudaGetDevice(&gpu_id);
+     stringstream tmp_str(options.get_str("ACTIVE_GPUS"));
+     string tmp_str2;
+     if(tmp_str.peek()!=-1){
+     while (getline(tmp_str, tmp_str2, '-')) {
+        gpus_used.push_back(stoi(tmp_str2));
+     }
+     } else {
+     for(int i = 0; i < n; ++i){
+        cudaSetDevice(i);
+        cudaMemGetInfo(&free,&total);
+        if(gpus_used.size()<num_gpus){
+            gpus_used.push_back(i);
+            mem.push_back(free);
+        } else {
+            int temp = 0;
+            int final = 0;
+            bool changed = false;
+            for(int j = 0; j < num_gpus; ++j){
+                if(mem[j] < mem[temp]){
+                   temp = j;
+                }
+            }
+            if(mem[temp] < free){
+                final = temp;
+                changed = true;
+                   }
+            if(changed){
+               gpus_used[final] = i;
+               mem[final] = free;
+            }
+        }
+     }
+     }
+     }
      for(int i=0;i<num_gpus;i++){
-     cudaGetDeviceProperties( &cudaProp,i );
+     cudaSetDevice(gpus_used[i]);
+     cudaGetDeviceProperties( &cudaProp,gpus_used[i] );
      outfile->Printf(
        "\n  _________________________________________________________\n");
      outfile->Printf("  CUDA device properties:\n");
@@ -96,17 +148,24 @@ void GPUHelper::CudaInitGPU(Options&options){
      outfile->Printf(
        "  _________________________________________________________\n\n");
      //fflush(outfile);
+     cudaMemGetInfo(&free,&total);
+     free-=200L*1024L*1024L;
+     if(i==0)
+        gpumemory = free;
+     if(free < gpumemory){
+        gpumemory = free;
+     }
      }
      //gpumemory = cudaProp.totalGlobalMem;
      
-     
+
      cudaMemGetInfo(&free,&total);
-     gpumemory = free;
+     //gpumemory = free;
      extraroom = 200L*1024L*1024L;
      cudaThreadExit();
 
      // default memory for mapped cpu memory is the sum of all gpu memory
-     max_mapped_memory = (num_gpus+num_cpus) * (gpumemory-extraroom);
+     max_mapped_memory = gpumemory;
      if (options["MAX_MAPPED_MEMORY"].has_changed()){
         long int temp_mem = options.get_int("MAX_MAPPED_MEMORY");
         temp_mem *= 1024L*1024L;
@@ -125,13 +184,13 @@ void GPUHelper::CudaInitGPU(Options&options){
          #ifdef _OPENMP
            thread = omp_get_thread_num();
          #endif
-         cudaSetDevice(thread);
+         cudaSetDevice(gpus_used[thread]);
          Check_CUDA_Error(stdout,"cudaSetDevice");
          cudaMallocHost((void**)&tmp[thread],max_mapped_memory_per_thread);  
          //tmp[thread] = (double*)malloc(max_mapped_memory_per_thread*sizeof(double));
          Check_CUDA_Error(stdout,"cpu tmp");
          //cudaMemGetInfo(&free,&total);
-         cudaMalloc((void**)&gpubuffer[thread],(gpumemory-extraroom));
+         cudaMalloc((void**)&gpubuffer[thread],gpumemory);
     //     cudaMalloc((void**)&gpubuffer[thread],gpumemory-extraroom);   
          Check_CUDA_Error(stdout,"gpu memory");
 
@@ -158,7 +217,7 @@ void GPUHelper::CudaInitGPU(Options&options){
      //    // TODO: need to be more intelligent about this...
      //    cpuarray[i] = (double*)malloc(3*max_mapped_memory_per_thread+20*max_mapped_memory_per_thread/30);
      //}
-  }
+  
 }
 /*===================================================================
 
@@ -173,7 +232,7 @@ void GPUHelper::CudaFinalizeGPU(Options&options){
          #ifdef _OPENMP
            thread = omp_get_thread_num();
          #endif
-         cudaSetDevice(thread);
+         cudaSetDevice(gpus_used[thread]);
          Check_CUDA_Error(stdout,"cudaSetDevice (free)");
          cudaFreeHost(tmp[thread]);
          Check_CUDA_Error(stdout,"cpu tmp (free)");
@@ -419,7 +478,7 @@ void GPUHelper::GPU_DGEMM_2DTile_nn_threaded(char transa,char transb,long int m,
       #ifdef _OPENMP
         thread = omp_get_thread_num();
       #endif
-      cudaSetDevice(thread);
+      cudaSetDevice(gpus_used[thread]);
 
       // pointers to gpu memory
       double*gpuA = gpubuffer[thread];
@@ -543,7 +602,7 @@ void GPUHelper::GPU_DGEMM_2DTile_nn(char transa,char transb,long int m,long int 
   else           
      for (long int i=0; i<n*ldc; i++) C[i] *= beta;
 
-  cudaSetDevice(thread);
+  cudaSetDevice(gpus_used[thread]);
 
   for (long int mn=0; mn<myntilesM[thread]*myntilesN[thread]; mn++){
 
@@ -769,7 +828,7 @@ void GPUHelper::GPU_DGEMM_2DTile_nt_threaded(char transa,char transb,long int m,
       #ifdef _OPENMP
         thread = omp_get_thread_num();
       #endif
-      cudaSetDevice(thread);
+      cudaSetDevice(gpus_used[thread]);
 
       // pointers to gpu memory ... keep in mind that tilesizeK has been reduced by at least a factor of 2.
       double*gpuA = gpubuffer[thread];
@@ -891,7 +950,7 @@ void GPUHelper::GPU_DGEMM_2DTile_nt(char transa,char transb,long int m,long int 
   else           
      for (long int i=0; i<n*ldc; i++) C[i] *= beta;
 
-  cudaSetDevice(thread);
+  cudaSetDevice(gpus_used[thread]);
 
   for (long int mn=0; mn<myntilesM[thread]*myntilesN[thread]; mn++){
 
@@ -1105,7 +1164,7 @@ void GPUHelper::GPU_DGEMM_2DTile_tn_threaded(char transa,char transb,long int m,
       #ifdef _OPENMP
         thread = omp_get_thread_num();
       #endif
-      cudaSetDevice(thread);
+      cudaSetDevice(gpus_used[thread]);
 
       // pointers to gpu memory
       double*gpuA = gpubuffer[thread];
@@ -1235,7 +1294,7 @@ void GPUHelper::GPU_DGEMM_2DTile_tn(char transa,char transb,long int m,long int 
   else           
      for (long int i=0; i<n*ldc; i++) C[i] *= beta;
 
-  cudaSetDevice(thread);
+  cudaSetDevice(gpus_used[thread]);
 
   for (long int mn=0; mn<myntilesM[thread]*myntilesN[thread]; mn++){
 
@@ -1444,7 +1503,7 @@ void GPUHelper::GPU_DGEMM_2DTile_tt_threaded(char transa,char transb,long int m,
       #ifdef _OPENMP
         thread = omp_get_thread_num();
       #endif
-      cudaSetDevice(thread);
+      cudaSetDevice(gpus_used[thread]);
 
       // pointers to gpu memory
       double*gpuA = gpubuffer[thread];
@@ -1571,7 +1630,7 @@ void GPUHelper::GPU_DGEMM_2DTile_tt(char transa,char transb,long int m,long int 
   else           
      for (long int i=0; i<n*ldc; i++) C[i] *= beta;
 
-  cudaSetDevice(thread);
+  cudaSetDevice(gpus_used[thread]);
 
   for (long int mn=0; mn<myntilesM[thread]*myntilesN[thread]; mn++){
 

@@ -56,6 +56,13 @@ INPUT OPTIONS
     you have a GPU to drive your monitor in addition to a compute-oriented
     card.
 
+* **ACTIVE_GPUS** (string):
+
+    the specific gpu's you would like to use. If this is not specified 
+    the code will automatically find the gpu(s) with the highest memory up to the
+    number of gpu(s) specified with NUM_GPUS. Ex. active_gpus '1-3' This will pick 
+    the 1st and 3rd gpu in the system but not the 0th or 2nd.
+
 * **MAX_MAPPED_MEMORY** (int): 
 
     the maximum amount of pinned CPU memory.  This
