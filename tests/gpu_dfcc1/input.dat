@@ -8,17 +8,14 @@ molecule {
            O          0.000000000000     0.000000000000    -0.068516219310   
            H          0.000000000000    -0.790689573744     0.543701060724   
            H          0.000000000000     0.790689573744     0.543701060724   
-           O          5.000000000000     0.000000000000    -0.068516219310   
-           H          5.000000000000    -0.790689573744     0.543701060724   
-           H          5.000000000000     0.790689573744     0.543701060724   
 }
 
 memory 32000 mb
 set {
-  cc_timings true
+  cc_timings false
   num_gpus 1
   cc_type df
-  df_basis_cc aug-cc-pvdz-ri
+  df_basis_cc  aug-cc-pvdz-ri
   df_basis_scf aug-cc-pvdz-jkfit
   basis        aug-cc-pvdz
   freeze_core true
@@ -29,10 +26,8 @@ set {
   maxiter 30
 }
 
-en = energy('gpu-df-ccsd')
+en_dfcc     = energy('ccsd')
+en_gpu_dfcc = energy('gpu-df-ccsd')
 
-ref_energy = -152.532253156213 # TEST
-#compare_values(ref_energy, get_variable("CURRENT ENERGY"), 8, "CCSD total energy") # TEST
-compare_values(ref_energy, en, 8, "CCSD total energy") # TEST
-
+compare_values(en_gpu_dfcc, en_dfcc, 8, "CCSD total energy") # TEST
 
