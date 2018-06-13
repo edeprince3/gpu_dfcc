@@ -89,11 +89,6 @@ def run_gpu_dfcc(name, **kwargs):
                                         "RIFIT", psi4.core.get_global_option("BASIS"))
     ref_wfn.set_basisset("DF_BASIS_CC", aux_basis)
 
-    #aux_basis = psi4.core.BasisSet.build(ref_wfn.molecule(), "DF_BASIS_CC",
-    #                                    psi4.core.get_global_option("DF_BASIS_CC"),
-    #                                    "RIFIT", psi4.core.get_global_option("BASIS"))
-    #ref_wfn.set_basisset("DF_BASIS_CC", aux_basis)
-
     returnvalue = psi4.core.plugin('gpu_dfcc.so',ref_wfn)
 
     # restore options

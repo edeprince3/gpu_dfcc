@@ -61,163 +61,166 @@ void GPUHelper::Check_CUDA_Error(FILE*fp,const char *message){
 ===================================================================*/
 void GPUHelper::CudaInitGPU(Options&options){
 
-  max_mapped_memory=0;
-  num_gpus=gpumemory=extraroom=0;
-  int n;
-  size_t free;
-  size_t total;
-  struct cudaDeviceProp cudaProp;
-  std::vector<unsigned long> mem;
-  cudaGetDeviceCount(&n);
-  num_gpus = n;
-  num_cpus=0;
-  if (options["NUM_GPUS"].has_changed())
-     num_gpus = options.get_int("NUM_GPUS");
-  else{
-     unsigned long tmp_mem = 0;
-     long tmp_gpu = 0;
-     num_gpus = 1;
-     for(int i = 0; i < n; ++i){
-        cudaSetDevice(i);
-        cudaMemGetInfo(&free,&total);
-        if(free > tmp_mem){
-           tmp_mem = free;
-           tmp_gpu = i;
+    max_mapped_memory=0;
+    num_gpus=gpumemory=extraroom=0;
+    int n;
+    size_t freemem;
+    size_t total;
+    struct cudaDeviceProp cudaProp;
+    std::vector<unsigned long> mem;
+    cudaGetDeviceCount(&n);
+    num_gpus = n;
+    if ( num_gpus == 0 ) {
+        throw PsiException("no GPU found",__FILE__,__LINE__);
+    }
+    num_cpus=0;
+    if ( options["NUM_GPUS"].has_changed() ) {
+        num_gpus = options.get_int("NUM_GPUS");
+    }else {
+        unsigned long tmp_mem = 0;
+        long tmp_gpu = 0;
+        num_gpus = 1;
+        for(int i = 0; i < n; ++i){
+           cudaSetDevice(i);
+           cudaMemGetInfo(&freemem,&total);
+           if(freemem > tmp_mem){
+              tmp_mem = freemem;
+              tmp_gpu = i;
+           }
         }
-     }
-     gpus_used.push_back(tmp_gpu);
-     mem.push_back(tmp_mem);
-  }
+        gpus_used.push_back(tmp_gpu);
+        mem.push_back(tmp_mem);
+    }
   
-  if (num_gpus>0 && options["NUM_GPUS"].has_changed()){
-     cublasInit();
-     int gpu_id;
-     //cudaGetDevice(&gpu_id);
-     stringstream tmp_str(options.get_str("ACTIVE_GPUS"));
-     string tmp_str2;
-     if(tmp_str.peek()!=-1){
-     while (getline(tmp_str, tmp_str2, '-')) {
-        gpus_used.push_back(stoi(tmp_str2));
-     }
-     } else {
-     for(int i = 0; i < n; ++i){
-        cudaSetDevice(i);
-        cudaMemGetInfo(&free,&total);
-        if(gpus_used.size()<num_gpus){
-            gpus_used.push_back(i);
-            mem.push_back(free);
-        } else {
-            int temp = 0;
-            int final = 0;
-            bool changed = false;
-            for(int j = 0; j < num_gpus; ++j){
-                if(mem[j] < mem[temp]){
-                   temp = j;
-                }
+    if (num_gpus>0 && options["NUM_GPUS"].has_changed()){
+        cublasInit();
+        int gpu_id;
+        //cudaGetDevice(&gpu_id);
+        stringstream tmp_str(options.get_str("ACTIVE_GPUS"));
+        string tmp_str2;
+        if(tmp_str.peek()!=-1){
+            while (getline(tmp_str, tmp_str2, '-')) {
+               gpus_used.push_back(stoi(tmp_str2));
             }
-            if(mem[temp] < free){
-                final = temp;
-                changed = true;
+        } else {
+            for(int i = 0; i < n; ++i){
+               cudaSetDevice(i);
+               cudaMemGetInfo(&freemem,&total);
+               if (gpus_used.size()<num_gpus){
+                   gpus_used.push_back(i);
+                   mem.push_back(freemem);
+               } else {
+                   int temp = 0;
+                   int final = 0;
+                   bool changed = false;
+                   for(int j = 0; j < num_gpus; ++j){
+                       if(mem[j] < mem[temp]){
+                           temp = j;
+                       }
                    }
-            if(changed){
-               gpus_used[final] = i;
-               mem[final] = free;
+                   if (mem[temp] < freemem){
+                       final = temp;
+                       changed = true;
+                   }
+                   if (changed){
+                       gpus_used[final] = i;
+                       mem[final] = freemem;
+                   }
+               }
             }
         }
-     }
-     }
-     }
-     for(int i=0;i<num_gpus;i++){
-     cudaSetDevice(gpus_used[i]);
-     cudaGetDeviceProperties( &cudaProp,gpus_used[i] );
-     outfile->Printf(
-       "\n  _________________________________________________________\n");
-     outfile->Printf("  CUDA device properties:\n");
-     outfile->Printf("  name:                 %20s\n",cudaProp.name);
-     outfile->Printf("  major version:        %20d\n",cudaProp.major);
-     outfile->Printf("  minor version:        %20d\n",cudaProp.minor);
-     outfile->Printf("  canMapHostMemory:     %20d\n",cudaProp.canMapHostMemory);
-     outfile->Printf("  totalGlobalMem:       %20lu mb\n",
-       cudaProp.totalGlobalMem/(1024*1024));
-     outfile->Printf("  sharedMemPerBlock:    %20lu\n",cudaProp.sharedMemPerBlock);
-     outfile->Printf("  clockRate:            %20.3f ghz\n",
-       cudaProp.clockRate/1.0e6);
-     outfile->Printf("  regsPerBlock:         %20d\n",cudaProp.regsPerBlock);
-     outfile->Printf("  warpSize:             %20d\n",cudaProp.warpSize);
-     outfile->Printf("  maxThreadsPerBlock:   %20d\n",cudaProp.maxThreadsPerBlock);
-     outfile->Printf(
-       "  _________________________________________________________\n\n");
-     //fflush(outfile);
-     cudaMemGetInfo(&free,&total);
-     free-=200L*1024L*1024L;
-     if(i==0)
-        gpumemory = free;
-     if(free < gpumemory){
-        gpumemory = free;
-     }
-     }
-     //gpumemory = cudaProp.totalGlobalMem;
-     
+    }
+    for(int i=0;i<num_gpus;i++){
+        cudaSetDevice(gpus_used[i]);
+        cudaGetDeviceProperties( &cudaProp,gpus_used[i] );
+        outfile->Printf(
+          "\n  _________________________________________________________\n");
+        outfile->Printf("  CUDA device properties:\n");
+        outfile->Printf("  name:                 %20s\n",cudaProp.name);
+        outfile->Printf("  major version:        %20d\n",cudaProp.major);
+        outfile->Printf("  minor version:        %20d\n",cudaProp.minor);
+        outfile->Printf("  canMapHostMemory:     %20d\n",cudaProp.canMapHostMemory);
+        outfile->Printf("  totalGlobalMem:       %20lu mb\n",
+          cudaProp.totalGlobalMem/(1024*1024));
+        outfile->Printf("  sharedMemPerBlock:    %20lu\n",cudaProp.sharedMemPerBlock);
+        outfile->Printf("  clockRate:            %20.3f ghz\n",
+          cudaProp.clockRate/1.0e6);
+        outfile->Printf("  regsPerBlock:         %20d\n",cudaProp.regsPerBlock);
+        outfile->Printf("  warpSize:             %20d\n",cudaProp.warpSize);
+        outfile->Printf("  maxThreadsPerBlock:   %20d\n",cudaProp.maxThreadsPerBlock);
+        outfile->Printf(
+          "  _________________________________________________________\n\n");
+        cudaMemGetInfo(&freemem,&total);
+        freemem-=200L*1024L*1024L;
+        if(i==0) {
+            gpumemory = freemem;
+        }
+        if(freemem < gpumemory) {
+            gpumemory = freemem;
+        }
+    }
+    //gpumemory = cudaProp.totalGlobalMem;
+    
 
-     cudaMemGetInfo(&free,&total);
-     //gpumemory = free;
-     extraroom = 200L*1024L*1024L;
-     cudaThreadExit();
+    cudaMemGetInfo(&freemem,&total);
+    //gpumemory = freemem;
+    extraroom = 200L*1024L*1024L;
+    cudaThreadExit();
 
-     // default memory for mapped cpu memory is the sum of all gpu memory
-     max_mapped_memory = gpumemory;
-     if (options["MAX_MAPPED_MEMORY"].has_changed()){
+    // default memory for mapped cpu memory is the sum of all gpu memory
+    max_mapped_memory = gpumemory;
+    if (options["MAX_MAPPED_MEMORY"].has_changed()){
         long int temp_mem = options.get_int("MAX_MAPPED_MEMORY");
         temp_mem *= 1024L*1024L;
         if (temp_mem<max_mapped_memory)
            max_mapped_memory = temp_mem;
-     }
-     max_mapped_memory_per_thread = max_mapped_memory/(num_gpus+num_cpus);
-     outfile->Printf("\n");
-     outfile->Printf("  allocating gpu memory...");
-     //fflush(outfile);
-     tmp = (double**)malloc(num_gpus*sizeof(double*));   
-     gpubuffer = (double**)malloc(num_gpus*sizeof(double*));
-     #pragma omp parallel for schedule (static) num_threads(num_gpus)
-     for (long int i=0; i<num_gpus; i++){
-         long int thread = 0;
-         #ifdef _OPENMP
-           thread = omp_get_thread_num();
-         #endif
-         cudaSetDevice(gpus_used[thread]);
-         Check_CUDA_Error(stdout,"cudaSetDevice");
-         cudaMallocHost((void**)&tmp[thread],max_mapped_memory_per_thread);  
-         //tmp[thread] = (double*)malloc(max_mapped_memory_per_thread*sizeof(double));
-         Check_CUDA_Error(stdout,"cpu tmp");
-         //cudaMemGetInfo(&free,&total);
-         cudaMalloc((void**)&gpubuffer[thread],gpumemory);
-    //     cudaMalloc((void**)&gpubuffer[thread],gpumemory-extraroom);   
-         Check_CUDA_Error(stdout,"gpu memory");
+    }
+    max_mapped_memory_per_thread = max_mapped_memory/(num_gpus+num_cpus);
+    outfile->Printf("\n");
+    outfile->Printf("  allocating gpu memory...");
+    //fflush(outfile);
+    tmp = (double**)malloc(num_gpus*sizeof(double*));   
+    gpubuffer = (double**)malloc(num_gpus*sizeof(double*));
+    #pragma omp parallel for schedule (static) num_threads(num_gpus)
+    for (long int i=0; i<num_gpus; i++){
+        long int thread = 0;
+        #ifdef _OPENMP
+          thread = omp_get_thread_num();
+        #endif
+        cudaSetDevice(gpus_used[thread]);
+        Check_CUDA_Error(stdout,"cudaSetDevice");
+        cudaMallocHost((void**)&tmp[thread],max_mapped_memory_per_thread);  
+        //tmp[thread] = (double*)malloc(max_mapped_memory_per_thread*sizeof(double));
+        Check_CUDA_Error(stdout,"cpu tmp");
+        //cudaMemGetInfo(&freemem,&total);
+        cudaMalloc((void**)&gpubuffer[thread],gpumemory);
+   //     cudaMalloc((void**)&gpubuffer[thread],gpumemory-extraroom);   
+        Check_CUDA_Error(stdout,"gpu memory");
 
-     }
-     // thread-safe tiling info: TODO: these are never free'd at the end
-     myntilesM = (long int*)malloc(num_gpus*sizeof(long int));
-     myntilesN = (long int*)malloc(num_gpus*sizeof(long int));
-     myntilesK = (long int*)malloc(num_gpus*sizeof(long int));
-     mytilesizeM = (long int*)malloc(num_gpus*sizeof(long int));
-     mytilesizeN = (long int*)malloc(num_gpus*sizeof(long int));
-     mytilesizeK = (long int*)malloc(num_gpus*sizeof(long int));
-     mylasttileM = (long int*)malloc(num_gpus*sizeof(long int));
-     mylasttileN = (long int*)malloc(num_gpus*sizeof(long int));
-     mylasttileK = (long int*)malloc(num_gpus*sizeof(long int));
-     mytilesizesM = (long int**)malloc(num_gpus*sizeof(long int*));
-     mytilesizesN = (long int**)malloc(num_gpus*sizeof(long int*));
-     mytilesizesK = (long int**)malloc(num_gpus*sizeof(long int*));
+    }
+    // thread-safe tiling info: TODO: these are never free'd at the end
+    myntilesM = (long int*)malloc(num_gpus*sizeof(long int));
+    myntilesN = (long int*)malloc(num_gpus*sizeof(long int));
+    myntilesK = (long int*)malloc(num_gpus*sizeof(long int));
+    mytilesizeM = (long int*)malloc(num_gpus*sizeof(long int));
+    mytilesizeN = (long int*)malloc(num_gpus*sizeof(long int));
+    mytilesizeK = (long int*)malloc(num_gpus*sizeof(long int));
+    mylasttileM = (long int*)malloc(num_gpus*sizeof(long int));
+    mylasttileN = (long int*)malloc(num_gpus*sizeof(long int));
+    mylasttileK = (long int*)malloc(num_gpus*sizeof(long int));
+    mytilesizesM = (long int**)malloc(num_gpus*sizeof(long int*));
+    mytilesizesN = (long int**)malloc(num_gpus*sizeof(long int*));
+    mytilesizesK = (long int**)malloc(num_gpus*sizeof(long int*));
 
-     //fflush(outfile);
+    //fflush(outfile);
 
-     // some cpu memory for cores to use when stealing gpu work 
-     //cpuarray = (double**)malloc(num_cpus*sizeof(double*));
-     //for (long int i=0; i<num_cpus; i++){
-     //    // TODO: need to be more intelligent about this...
-     //    cpuarray[i] = (double*)malloc(3*max_mapped_memory_per_thread+20*max_mapped_memory_per_thread/30);
-     //}
-  
+    // some cpu memory for cores to use when stealing gpu work 
+    //cpuarray = (double**)malloc(num_cpus*sizeof(double*));
+    //for (long int i=0; i<num_cpus; i++){
+    //    // TODO: need to be more intelligent about this...
+    //    cpuarray[i] = (double*)malloc(3*max_mapped_memory_per_thread+20*max_mapped_memory_per_thread/30);
+    //}
+ 
 }
 /*===================================================================
 
