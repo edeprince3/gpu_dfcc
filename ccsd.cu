@@ -1533,10 +1533,8 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
                     }
                 }
             }
-printf("before\n");fflush(stdout);
-            if (gpudone) helper_->GPUTiledDGEMM('n','n',o*o*v,v,v,1.0,tempt,o*o*v,Fab,v,0.0,tempv,o*o*v); // hey its this one
+            if (gpudone) helper_->GPUTiledDGEMM('n','n',o*o*v,v,v,1.0,tempt,o*o*v,Fab,v,0.0,tempv,o*o*v);
             else F_DGEMM('n','n',o*o*v,v,v,1.0,tempt,o*o*v,Fab,v,0.0,tempv,o*o*v);
-printf("after\n");fflush(stdout);
             #pragma omp parallel for schedule (dynamic) num_threads(nthreads)
             for (int a = 0; a < v; a++) {
                 for (int b = 0; b < v; b++) {

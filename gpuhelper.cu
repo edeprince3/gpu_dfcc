@@ -467,8 +467,6 @@ void GPUHelper::GPU_DGEMM_2DTile_nn_threaded(char transa,char transb,long int m,
 
   Tiling((gpumemory-extraroom)/8L,max_mapped_memory_per_thread/8L,m,n,k);
 
-  printf("hey %5i %5i %5i ... %5i %5i %5i ... %5i %5i %5i\n",m,n,k,tilesizeM,tilesizeN,tilesizeK,lasttileM,lasttileN,lasttileK);
-
   // initialize result
   if (beta==0.0) 
      memset((void*)C,'\0',n*ldc*sizeof(double));
