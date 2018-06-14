@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 cmake_policy(SET CMP0048 NEW)
 project(gpu_dfcc VERSION 1.0 LANGUAGES CXX CUDA)
-find_package(CUDA)
+find_package(CUDA REQUIRED)
 #find_package(PythonLibs 2.7 REQUIRED)
 find_package(psi4)
 include_directories(${PYTHON_INCLUDE_DIRS})
