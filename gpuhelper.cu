@@ -467,6 +467,8 @@ void GPUHelper::GPU_DGEMM_2DTile_nn_threaded(char transa,char transb,long int m,
 
   Tiling((gpumemory-extraroom)/8L,max_mapped_memory_per_thread/8L,m,n,k);
 
+  printf("hey %5i %5i %5i ... %5i %5i %5i ... %5i %5i %5i\n",m,n,k,tilesizeM,tilesizeN,tilesizeK,lasttileM,lasttileN,lasttileK);
+
   // initialize result
   if (beta==0.0) 
      memset((void*)C,'\0',n*ldc*sizeof(double));
@@ -1903,7 +1905,9 @@ void GPUHelper::Tiling(long int mem1,long int mem2,long int m,long int n,long in
   //if (m/ntilesM<(double)m/ntilesM) tilesizeM++;
 
 
-//AED - something is wrong with the tiling ... 
+  long int saveM = ntilesM;
+  long int saveN = ntilesN;
+  long int saveK = ntilesK;
   if (ntilesK < 4)  {
       ntilesK = 8;
       tilesizeK = k/ntilesK;
@@ -1914,11 +1918,34 @@ void GPUHelper::Tiling(long int mem1,long int mem2,long int m,long int n,long in
       tilesizeK = k/ntilesK;
       if (k/ntilesK<(double)k/ntilesK) tilesizeK++;
   }
-//AED
 
   lasttileN = n - (ntilesN-1L)*tilesizeN;
   lasttileM = m - (ntilesM-1L)*tilesizeM;
   lasttileK = k - (ntilesK-1L)*tilesizeK;
+
+  // The tiling scheme above does not work well for 
+  // small systems, in which case it is possible for
+  // the last tile size to be negative. It is possible
+  // that there is a bug above. Regardless, the check
+  // here should avert catastrophe.
+  if ( lasttileM < 0 ) {
+      ntilesM = saveM;
+      tilesizeM = m/ntilesM;
+      if (m/ntilesM<(double)m/ntilesM) tilesizeM++;
+      lasttileM = m - (ntilesM-1L)*tilesizeM;
+  }
+  if ( lasttileN < 0 ) {
+      ntilesN = saveN;
+      tilesizeN = n/ntilesN;
+      if (n/ntilesN<(double)n/ntilesN) tilesizeN++;
+      lasttileN = n - (ntilesN-1L)*tilesizeN;
+  }
+  if ( lasttileK < 0 ) {
+      ntilesK = saveK;
+      tilesizeK = k/ntilesK;
+      if (k/ntilesK<(double)k/ntilesK) tilesizeK++;
+      lasttileK = k - (ntilesK-1L)*tilesizeK;
+  }
 
   tilesizesM = (long int*)malloc(ntilesM*sizeof(long int));
   tilesizesN = (long int*)malloc(ntilesN*sizeof(long int));

@@ -1498,7 +1498,6 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
                 mkl_domain_set_num_threads(ncputhreads, MKL_DOMAIN_BLAS);
             }
 
-
             // E2 a: t(ac,ij) [ F(bc) - U(bd,kl) (ld|kc) ]
             C_DCOPY(o*o*v*v,tb,1,tempt,1);
             #pragma omp parallel for schedule (dynamic) num_threads(nthreads)
@@ -1534,8 +1533,10 @@ void GPUDFCoupledCluster::pthreadCCResidual(int id) {
                     }
                 }
             }
-            if (gpudone) helper_->GPUTiledDGEMM('n','n',o*o*v,v,v,1.0,tempt,o*o*v,Fab,v,0.0,tempv,o*o*v);
+printf("before\n");fflush(stdout);
+            if (gpudone) helper_->GPUTiledDGEMM('n','n',o*o*v,v,v,1.0,tempt,o*o*v,Fab,v,0.0,tempv,o*o*v); // hey its this one
             else F_DGEMM('n','n',o*o*v,v,v,1.0,tempt,o*o*v,Fab,v,0.0,tempv,o*o*v);
+printf("after\n");fflush(stdout);
             #pragma omp parallel for schedule (dynamic) num_threads(nthreads)
             for (int a = 0; a < v; a++) {
                 for (int b = 0; b < v; b++) {
