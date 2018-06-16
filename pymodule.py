@@ -125,6 +125,11 @@ psi4.driver.procedures['energy']['gpu-df-ccsd(t)'] = run_gpu_dfcc
 psi4.driver.procedures['energy']['gpu-df-ccsd']    = run_gpu_dfcc
 
 
-def exampleFN():
-    # Your Python code goes here
-    pass
+def cudaGetDeviceCount():
+    from . import GPUtil
+    try:
+        ngpu = len(GPUtil.getGPUs())
+    except OSError:  # py3 FileNotFoundError
+        return 0
+    else:
+        return ngpu
