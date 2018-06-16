@@ -49,7 +49,7 @@ def run_gpu_dfcc(name, **kwargs):
          ['GPU_DFCC','DFCC'],
          ['GPU_DFCC','NAT_ORBS'],
          ['SCF','DF_INTS_IO'],
-         ['SCF','SCF_TYPE'],
+         ['SCF_TYPE'],
          ['GPU_DFCC','CC_TYPE'])
 
     psi4.core.set_local_option('GPU_DFCC','DFCC', True)

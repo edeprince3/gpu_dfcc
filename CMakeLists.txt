@@ -2,28 +2,28 @@ cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 cmake_policy(SET CMP0048 NEW)
 project(gpu_dfcc VERSION 1.0 LANGUAGES CXX CUDA)
 find_package(CUDA REQUIRED)
-#find_package(PythonLibs 2.7 REQUIRED)
+
 find_package(psi4)
 include_directories(${PYTHON_INCLUDE_DIRS})
 set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -Xcompiler -fopenmp")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 set(PN ${PROJECT_NAME})
-#set(CMAKE_CXX_STANDARD_LIBRARIES ${CUDA_LIBRARIES} "-lcublas -lcudart -lcusolver")
-cuda_add_library(core SHARED
+
+cuda_add_library(gpu_dfcc SHARED
   gpu_dfcc.cu
   gpuhelper.cu
   gpuhelper_driver.cc
   triples.cu
   ccsd.cu)
 
-target_link_libraries(core
+target_link_libraries(gpu_dfcc
   ${PYTHON_LIBRARIES}
   cublas
   cusolver
   cudart
   psi4::core    )
 include(CMakePackageConfigHelpers)
-set_target_properties(core PROPERTIES PREFIX "")
+set_target_properties(gpu_dfcc PROPERTIES PREFIX "")
 
 get_filename_component(psi4_CMAKE_INSTALL_PREFIX ${psi4_INCLUDE_DIR} DIRECTORY)
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
@@ -42,18 +42,21 @@ else()
 endif()
 message(STATUS "Plugin module install: ${PYMOD_INSTALL_FULLDIR}")
 
+configure_file(__init__.py.in __init__.py @ONLY)
+
 # <<<  Install  >>>
 
-install(TARGETS core
+install(TARGETS gpu_dfcc
         EXPORT "${PN}Targets"
         LIBRARY DESTINATION ${PYMOD_INSTALL_FULLDIR})
 
-install(FILES __init__.py pymodule.py LICENSE README.md
+install(FILES __init__.py extras.py GPUtil.py pymodule.py LICENSE README.md
         DESTINATION ${PYMOD_INSTALL_FULLDIR})
 
 install(DIRECTORY tests/
         DESTINATION ${PYMOD_INSTALL_FULLDIR}/tests
         FILES_MATCHING PATTERN "gpu_dfcc*/input.dat"
+                       PATTERN "*.py"
         PATTERN "old-tests" EXCLUDE)
 
 # <<< Export Config >>>
