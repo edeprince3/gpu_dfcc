@@ -7,3 +7,6 @@ CMakeFiles
 cmake_install.cmake
 gpu_dfccConfig.cmake
 gpu_dfccConfigVersion.cmake
+__init__.py
+install_manifest.txt
+Makefile
