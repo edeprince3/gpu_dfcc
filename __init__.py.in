@@ -31,7 +31,7 @@ __author__  = 'A. Eugene DePrince III'
 # Load Psi4
 psi4_sys_path = '@psi4_SYS_PATH@'
 import sys
-sys.path.insert(0, psi4_sys_path)
+sys.path.append(psi4_sys_path)
 
 # Load Python modules
 from .pymodule import *
