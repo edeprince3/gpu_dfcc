@@ -49,7 +49,6 @@ def run_gpu_dfcc(name, **kwargs):
          ['GPU_DFCC','DFCC'],
          ['GPU_DFCC','NAT_ORBS'],
          ['SCF','DF_INTS_IO'],
-         ['SCF_TYPE'],
          ['GPU_DFCC','CC_TYPE'])
 
     psi4.core.set_local_option('GPU_DFCC','DFCC', True)
@@ -69,7 +68,7 @@ def run_gpu_dfcc(name, **kwargs):
                 core.set_global_option('SCF_TYPE', 'CD')
                 core.print_out("""    SCF Algorithm Type (re)set to CD.\n""")
 
-        elif type_val == 'DF':
+        elif type_val in ['DF', 'DISK_DF']:
             if core.get_option('GPU_DFCC', 'DF_BASIS_CC') == 'CHOLESKY':
                 core.set_local_option('GPU_DFCC', 'DF_BASIS_CC', '')
 
