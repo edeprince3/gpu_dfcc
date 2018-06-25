@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 cmake_policy(SET CMP0048 NEW)
-project(gpu_dfcc VERSION 1.0 LANGUAGES CXX CUDA)
+project(gpu_dfcc VERSION 0.3 LANGUAGES CXX CUDA)
 find_package(CUDA REQUIRED)
 
 find_package(psi4)
