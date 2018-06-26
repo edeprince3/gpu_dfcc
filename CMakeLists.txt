@@ -50,7 +50,8 @@ install(TARGETS gpu_dfcc
         EXPORT "${PN}Targets"
         LIBRARY DESTINATION ${PYMOD_INSTALL_FULLDIR})
 
-install(FILES __init__.py extras.py GPUtil.py pymodule.py LICENSE README.md
+install(FILES extras.py GPUtil.py pymodule.py LICENSE README.md
+        ${CMAKE_CURRENT_BINARY_DIR}/__init__.py
         DESTINATION ${PYMOD_INSTALL_FULLDIR})
 
 install(DIRECTORY tests/
